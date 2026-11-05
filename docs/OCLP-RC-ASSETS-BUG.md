@@ -143,6 +143,10 @@ It does what OCLP's code meant to do, using the correct release tag:
 
 Nothing is installed on the Mac you run it from, and no disk is erased. Build and install OpenCore onto the USB's EFI in OCLP as usual; the script doesn't touch the EFI.
 
+## Confirmed on hardware
+
+On 2026-11-05, a MacBookPro11,3 USB made with OCLP 3.0.0-rc.5 for Tahoe 26.7.2 (25G332) had both packages missing, exactly as described above. After `autopatch_rescue.py` added them (and the DataHub values), Tahoe installed with no Lilu loop and the owner reports it works. See [TESTING.md](TESTING.md#2026-11-05-oclp-rc5--tahoe-2672-with-autopatch-rescue).
+
 ## Upstream
 
 The underlying fix belongs in OCLP: build the release URL from the build's tag (not `patcher_version`), check the download and unzip results, and stop with a clear error instead of returning silently. A local fork branch (`codex/installer-assets-release-validation`, *"installer: select tagged assets and report preparation failures"*) prototypes this, but it hasn't been submitted upstream.

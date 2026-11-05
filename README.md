@@ -24,6 +24,7 @@ It also checks the OpenCore on the USB's EFI. If OCLP built it for the target Ma
 | :--- | :--- |
 | `Library/Packages` on the USB is missing or empty | Run Autopatch Rescue. |
 | Boot loops on `Lilu … failed to obtain model information` | Run Autopatch Rescue to fill in the DataHub values, or `--check` to see them. |
+| Tested on hardware | MacBookPro11,3, OCLP 3.0.0-rc.5, Tahoe 26.7.2 (25G332), 2026-11-05: installed with no Lilu loop and working. |
 | You use a final OCLP release (e.g. 2.5.1) | Not affected, but `--check` confirms it. |
 | After the final 3.0.0 is published | Update OCLP first. An RC app would then download the final release's assets, which don't match it. |
 
@@ -37,7 +38,7 @@ It also checks the OpenCore on the USB's EFI. If OCLP built it for the target Ma
 
 **A four-step guide: create the USB, prepare it, install Tahoe, then set up booting without the USB.**
 
-For the **mid-2014 15-inch MacBook Pro (MacBookPro11,3)** with Intel Iris Pro and NVIDIA GT 750M. This guide records the setup that worked with **Tahoe 26.7.1 / build 25G241 and OCLP 3.0.0 RC3**, and `prepare_usb.py` is pinned to exactly that. For OCLP RC5 or Tahoe 26.7.2, use [Autopatch Rescue](#oclp-tahoe-autopatch-rescue) above for the missing packages. A clean RC5 / 26.7.2 test on this model without the extra fixes is in progress.
+For the **mid-2014 15-inch MacBook Pro (MacBookPro11,3)** with Intel Iris Pro and NVIDIA GT 750M. This guide records the setup that worked with **Tahoe 26.7.1 / build 25G241 and OCLP 3.0.0 RC3**, and `prepare_usb.py` is pinned to exactly that. For OCLP RC5 or Tahoe 26.7.2, use [Autopatch Rescue](#oclp-tahoe-autopatch-rescue) above for the missing packages. **2026-11-05:** a USB made with OCLP RC5 for Tahoe 26.7.2 (25G332), then completed with Autopatch Rescue, installed Tahoe on this MacBookPro11,3 with **no Lilu loop**, and the owner reports it works. No step from this older guide was needed for the install. [Details](docs/TESTING.md#2026-11-05-oclp-rc5--tahoe-2672-with-autopatch-rescue).
 
 > [!IMPORTANT]
 > **Step 4 is required to boot without the USB in this workflow.**
