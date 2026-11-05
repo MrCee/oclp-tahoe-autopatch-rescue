@@ -1,10 +1,10 @@
-# Autopatch Rescue for OpenCore Legacy Patcher
+# OCLP Tahoe Autopatch Rescue
 
 ![OCLP: 3.0.0 RC](https://img.shields.io/badge/OCLP-3.0.0--rc.5-f59e0b)
-![macOS: Big Sur and newer](https://img.shields.io/badge/macOS-11%20and%20newer-111827)
+![macOS: Tahoe 26](https://img.shields.io/badge/macOS-Tahoe%2026-111827)
 ![Any OCLP Mac](https://img.shields.io/badge/model-any%20OCLP%20Mac-2563eb)
 
-**Your OCLP USB installs macOS, but nothing gets patched afterwards?** OCLP 3.0.0 release candidates (RC1, RC2, RC3, RC5) build installer USBs **without `AutoPkg-Assets.pkg` and without `KDK.pkg`**, and still report success. After installing macOS, OCLP isn't installed and no root patches run, so Wi-Fi, graphics acceleration and audio may not work. It happens on every Mac model.
+**Your OCLP Tahoe USB installs macOS, but nothing gets patched afterwards?** The OCLP 3.0.0 release candidates (RC1, RC2, RC3, RC5), the builds that add Tahoe support, create installer USBs **without `AutoPkg-Assets.pkg` and without `KDK.pkg`**, and still report success. After installing macOS, OCLP isn't installed and no root patches run, so Wi-Fi, graphics acceleration and audio may not work. It happens on every Mac model.
 
 **Autopatch Rescue** checks the USB and adds exactly the two official files OCLP should have added, verified against GitHub's published SHA-256 digests.
 
@@ -34,7 +34,7 @@ Run it on the Mac where you created the USB, after OCLP's *Create macOS Installe
 
 **A four-step guide: create the USB, prepare it, install Tahoe, then set up booting without the USB.**
 
-For the **mid-2014 15-inch MacBook Pro (MacBookPro11,3)** with Intel Iris Pro and NVIDIA GT 750M. This guide records the setup that worked with **Tahoe 26.7.1 / build 25G241 and OCLP 3.0.0 RC3**, and `prepare_usb.py` is pinned to exactly that. For OCLP RC5 or Tahoe 26.7.2, use [Autopatch Rescue](#autopatch-rescue-for-opencore-legacy-patcher) above for the missing packages. A clean RC5 / 26.7.2 test on this model without the extra fixes is in progress.
+For the **mid-2014 15-inch MacBook Pro (MacBookPro11,3)** with Intel Iris Pro and NVIDIA GT 750M. This guide records the setup that worked with **Tahoe 26.7.1 / build 25G241 and OCLP 3.0.0 RC3**, and `prepare_usb.py` is pinned to exactly that. For OCLP RC5 or Tahoe 26.7.2, use [Autopatch Rescue](#oclp-tahoe-autopatch-rescue) above for the missing packages. A clean RC5 / 26.7.2 test on this model without the extra fixes is in progress.
 
 > [!IMPORTANT]
 > **Step 4 is required to boot without the USB in this workflow.**

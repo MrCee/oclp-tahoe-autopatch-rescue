@@ -85,6 +85,7 @@ The log then shows **"Installer pkg validated"**, and OCLP offers to install Ope
 - **Affected:** any OCLP build whose `patcher_version` has no GitHub release with exactly that name. That's every 3.0.0 release candidate (RC1, RC2, RC3, RC5), because all of them report `3.0.0`.
 - **Not affected:** final releases. Their version and tag are the same (for example `2.5.1`, the current latest release), so step 1 finds the package and nothing else goes wrong.
 - **Caution for later:** once a final `3.0.0` release is published, an **RC app** will find *that* package and copy the **3.0.0 final assets** onto the USB, which don't match the RC app you're running. Update OCLP to the final release before creating a USB at that point.
+- **In practice this means Tahoe.** The 3.0.0 RCs are the builds that add macOS Tahoe 26 support, so Tahoe installers are where people hit it. The code path itself would affect any Big Sur or newer installer made with an RC.
 - **Doesn't depend on the target Mac.** The download and copy happen before any model-specific logic. Every model built from an affected OCLP gets a USB without automatic patching.
 
 ## Do I need the KDK?
