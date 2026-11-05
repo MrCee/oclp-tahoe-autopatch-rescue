@@ -91,8 +91,7 @@ The script reads the OpenCore config on the USB's EFI (`EFI/OC/config.plist`) ev
 | Situation | What to do |
 | :--- | :--- |
 | `Library/Packages` on the USB is missing or empty | Run the script. |
-| Boot loop on "failed to obtain model information" | Run the script to fill in the DataHub values, or `--check` to see them. |
-| After a blank-DataHub boot loop, the Mac misbehaves for a restart or two | Reset NVRAM (hold Option-Command-P-R at power-on). |
+| Boot loop on "failed to obtain model information" | Run the script on the USB, then do a clean install from it. |
 | You use a final (non-RC) OCLP release | The package download works on final releases. Run `--check` to see whether anything else is missing. |
 | The final 3.0.0 has been published | Update OCLP first. An RC app would then download the final release's assets, which don't match it. |
 
