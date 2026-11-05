@@ -38,7 +38,7 @@ If boot fails, reconnect this unchanged USB and boot USB EFI Boot -> Macintosh H
 Do not erase a working Tahoe installation to fix this handover.
 Rebuilding internal OpenCore later requires repeating the finishing step.
 
-Guide and updates: https://github.com/MrCee/oclp-tahoe-mbp113-usb-preparation
+Guide and updates: https://github.com/MrCee/oclp-tahoe-autopatch-rescue
 This bundle is a snapshot from USB preparation, not an automatically updating copy.
 '''
 

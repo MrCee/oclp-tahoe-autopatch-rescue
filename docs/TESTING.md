@@ -12,6 +12,18 @@ The automated launcher/staging checks below verify script behavior. They do not 
 
 The public packaging has not been run on a second physical Mac. There are no claimed performance, sleep/wake, GPU switching or future-update results. The sequence was not repeated with each dependency removed individually.
 
+### 2026-11-05: OCLP RC5 + Tahoe 26.7.2 with Autopatch Rescue
+
+Same mid-2014 **MacBookPro11,3**. The USB was created on an iMac18,2 with the official **OCLP 3.0.0-rc.5** app: *Create macOS Installer* (Tahoe **26.7.2, 25G332**), then *Build and Install OpenCore* for MacBookPro11,3 onto the USB.
+
+| Check | Result |
+| :--- | :--- |
+| USB as OCLP left it | No `Library/Packages` (no `AutoPkg-Assets.pkg`, no `KDK.pkg`); DataHub `SystemProductName`/`BoardProduct` empty, `UpdateDataHub` false. OCLP log: `Stock Install.pkg is missing on Github`, `Downloaded size: 495.0 B`. |
+| `autopatch_rescue.py` | Added RC5 `AutoPkg-Assets.pkg` (`a965871a…`) and Apple `KDK.pkg` for 25G332 from `Kernel_Debug_Kit_26.7.2_build_25G332.dmg` (`9490bd9b…`); set DataHub to `MacBookPro11,3` / `Mac-2BD1B31983FE1663` / `UpdateDataHub = true` with a config backup; ended with `PASS`. |
+| Install on the MacBook | Booted through USB EFI, installed Tahoe 26.7.2. **No `Lilu … failed to obtain model information` loop.** The owner reports the installation works. |
+
+**Limits:** all three fixes were applied together, so this doesn't show which one was essential on RC5 by itself. The packages are needed by mechanism (no OCLP to auto-patch without the assets package; Modern Audio needs the KDK offline). DataHub was required on RC3 and wasn't retested empty on RC5. Booting without the USB (internal OpenCore) was not part of this test, and the older `finish_install.py` is still tied to 26.7.1.
+
 ## Automated fixture checks
 
 **2026-10-17 result:** all 109 checks passed on the preparation iMac, including internal-EFI handover, USB bundling and Command Line Tools bootstrap checks. Generated test output remains local and ignored.
@@ -30,6 +42,7 @@ The script builds and ad-hoc signs the x86_64 native utility, checks the Bash sc
 | Optional Recovery preparation and EFI discovery | 19 | Disposable USB/EFI fixtures; package building mocked, native deployment hashes executed; no real disks |
 | Default installer-only preparation and boot layout detection | 25 | Package/EFI fixtures and real Python deployment; automatic KDK image acquisition mocked; compiler/extraction prohibited; old-USB finishing bundle upgrade |
 | Preparation prerequisites | 2 | Installer-only mode needs no compiler; optional mode reports absent compiler clearly |
+| Autopatch Rescue (any model) | 31 | Fake installer USB and GitHub releases; no network or disk images. Covers adding both packages, skipping correct files, `--check` without writes, wrong packages, cached downloads and partial copies deleted before re-downloading, corrupt and HTML-error downloads, missing digests, a missing KDK release and `--kdk-build`, an unsigned KDK, internal or non-installer volumes, pre-Big Sur installers, low space, reading the OCLP tag, and the EFI DataHub step: filling empty values from the built model, board ID per model, keeping correct or spoofed configs, refusing to overwrite conflicting values or non-OCLP configs, `--check` and `--packages-only` |
 | Download, copy progress and transfer integrity | 8 | Mocked responses; known/unknown sizes, scrolling bar, speed/ETA, large-file hash/copy progress, preserved copy metadata, truncated/corrupt transfers and interruption cleanup |
 | Internal OpenCore config handover | 14 | Disposable EFI; disk/model/build commands mocked; no physical disk mounted or changed |
 | USB finishing bundle and tools bootstrap | 13 | Bundled module imports, hashes, backups, reuse and symlink guards; fake Apple update/install commands; no real tools installed |
