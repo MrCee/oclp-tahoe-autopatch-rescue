@@ -14,7 +14,7 @@ cd oclp-tahoe-mbp113-usb-preparation
 python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"
 ```
 
-Run it on the Mac where you created the USB, after OCLP's *Create macOS Installer*. It needs Python 3.9+, internet access and about 2.2 GB free on the USB. It reads the installer's macOS build and your installed OCLP release (for example `3.0.0-rc.5`). It skips files that are already correct and stops on anything it can't verify. Add `--check` to report without changing anything. Then build and install OpenCore for your Mac onto the USB's EFI in OCLP as usual.
+Run it on the Mac where you created the USB, after OCLP's *Create macOS Installer*. It needs Python 3.9+, internet access and about 2.2 GB free on the USB. It reads the installer's macOS build and your installed OCLP release (for example `3.0.0-rc.5`). It skips files that are already correct, never edits a package (anything that doesn't match is deleted and downloaded again), and stops on anything it can't verify. Add `--check` to report without changing anything. Then build and install OpenCore for your Mac onto the USB's EFI in OCLP as usual.
 
 **Why this happens, with logs and source references:** [docs/OCLP-RC-ASSETS-BUG.md](docs/OCLP-RC-ASSETS-BUG.md). In short, OCLP looks for a GitHub release named `3.0.0` that doesn't exist during the RC phase. Its fallback saves a nightly.link 404 page as the package, and the step that copies the package and the KDK then quits silently.
 

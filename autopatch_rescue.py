@@ -15,7 +15,8 @@ warning (see docs/OCLP-RC-ASSETS-BUG.md), so the USB is left without both.
 This script reads the installer's macOS build and the OCLP release tag, then
 adds exactly the official files OCLP would have added, each verified against
 the SHA-256 digest GitHub publishes for it. Correct files already present are
-kept. Nothing is installed on this Mac and no disk is erased.
+kept. A package that does not match is deleted and downloaded again, never
+edited. Nothing is installed on this Mac and no disk is erased.
 
   python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"           # fix
   python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe" --check   # report only
@@ -86,6 +87,14 @@ def copy_verified(source, dest, expected_sha):
             tmp.unlink()
 
 
+def remove(path, why):
+    """Packages are never edited in place: a file that does not match is deleted."""
+    path = Path(path)
+    if path.exists():
+        say(f"  deleting {path.name}: {why}")
+        path.unlink()
+
+
 def free_space(path):
     return shutil.disk_usage(path).free
 
@@ -125,9 +134,11 @@ def download(url, name, size, expected_sha, cache):
     """Download into the cache (reused when already verified) and return its path."""
     cache.mkdir(parents=True, exist_ok=True)
     dest = cache / name
-    if dest.is_file() and dest.stat().st_size == size and sha256(dest, name) == expected_sha:
-        say(f"  using verified cached {name}")
-        return dest
+    if dest.is_file():
+        if dest.stat().st_size == size and sha256(dest, name) == expected_sha:
+            say(f"  using verified cached {name}")
+            return dest
+        remove(dest, "cached copy does not match GitHub's SHA-256 digest")
     say(f"  downloading {name} ({size / 1024 ** 2:.0f} MiB) from {url}")
     fd, tmp = tempfile.mkstemp(prefix=name + ".", suffix=".part", dir=str(cache))
     try:
@@ -266,6 +277,14 @@ def fix(usb, want, cache):
         return state
 
     packages.mkdir(parents=True, exist_ok=True)
+    for leftover in packages.glob(".*.part"):
+        remove(leftover, "unfinished copy from an earlier run")
+    if not assets_ok:
+        remove(packages / ASSETS, "does not match the official package for OCLP " + want["oclp_tag"])
+    if not kdk_ok:
+        remove(packages / KDK, "not verified as the Apple KDK for build " + want["kdk_build"])
+        state.pop("kdk_pkg_sha256", None)
+        state.pop("kdk_dmg_sha256", None)
     needed = (0 if assets_ok else want["assets"][2]) + (0 if kdk_ok else want["kdk"][2])
     if free_space(usb) < needed + 64 * 1024 ** 2:
         raise FixError(f"The USB needs about {needed / 1024 ** 3:.1f} GiB free for the missing packages.")

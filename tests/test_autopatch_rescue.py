@@ -115,12 +115,39 @@ class RescueTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("PASS", out)
 
-    def test_wrong_assets_package_is_replaced(self):
+    def test_wrong_assets_package_is_deleted_then_downloaded(self):
         self.packages().mkdir(parents=True)
         (self.packages() / "AutoPkg-Assets.pkg").write_bytes(b"RC3 or truncated package")
-        code, _ = self.run_main()
+        code, out = self.run_main()
         self.assertEqual(code, 0)
+        self.assertIn("deleting AutoPkg-Assets.pkg: does not match", out)
+        self.assertLess(out.index("deleting AutoPkg-Assets.pkg"), out.index("downloading AutoPkg-Assets.pkg"))
         self.assertEqual((self.packages() / "AutoPkg-Assets.pkg").read_bytes(), ASSETS_BYTES)
+
+    def test_unverified_kdk_package_is_deleted_then_replaced(self):
+        self.packages().mkdir(parents=True)
+        (self.packages() / "KDK.pkg").write_bytes(b"KDK for another build")
+        code, out = self.run_main()
+        self.assertEqual(code, 0)
+        self.assertIn("deleting KDK.pkg: not verified", out)
+        self.assertEqual((self.packages() / "KDK.pkg").read_bytes(), KDK_PKG_BYTES)
+
+    def test_mismatched_cached_download_is_deleted_and_downloaded_again(self):
+        self.cache.mkdir()
+        (self.cache / "AutoPkg-Assets.pkg").write_bytes(b"x" * len(ASSETS_BYTES))
+        code, out = self.run_main()
+        self.assertEqual(code, 0)
+        self.assertIn("deleting AutoPkg-Assets.pkg: cached copy does not match", out)
+        self.assertIn("AutoPkg-Assets.pkg", self.downloads)
+        self.assertEqual((self.cache / "AutoPkg-Assets.pkg").read_bytes(), ASSETS_BYTES)
+
+    def test_unfinished_copy_from_earlier_run_is_deleted(self):
+        self.packages().mkdir(parents=True)
+        (self.packages() / ".KDK.pkg.part").write_bytes(b"interrupted")
+        code, out = self.run_main()
+        self.assertEqual(code, 0)
+        self.assertFalse((self.packages() / ".KDK.pkg.part").exists())
+        self.assertIn("unfinished copy", out)
 
     def test_correct_assets_kept_when_only_kdk_missing(self):
         self.packages().mkdir(parents=True)
