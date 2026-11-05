@@ -41,6 +41,9 @@ class RescueTests(unittest.TestCase):
         (self.usb / "Install macOS Tahoe.app").mkdir()
         self.mount.mkdir()
         (self.mount / "KernelDebugKit.pkg").write_bytes(KDK_PKG_BYTES)
+        self.efi = root / "efi"
+        (self.efi / "EFI/OC").mkdir(parents=True)
+        self.write_config()
         self.releases = {
             "dortania/OpenCore-Legacy-Patcher@3.0.0-rc.5": {"assets": [asset("AutoPkg-Assets.pkg", ASSETS_BYTES)]},
             "dortania/KdkSupportPkg@25G332": {"assets": [asset("Kernel_Debug_Kit_26.7.2_build_25G332.dmg", KDK_DMG_BYTES)]},
@@ -60,9 +63,15 @@ class RescueTests(unittest.TestCase):
         def fake_mounted(dmg):
             yield self.mount
 
+        @contextlib.contextmanager
+        def fake_efi_mounted(device):
+            yield self.efi
+
         for target, value in [
             ("release", fake_release),
             ("mounted", fake_mounted),
+            ("efi_mounted", fake_efi_mounted),
+            ("efi_partition", lambda usb: "disk9s1"),
             ("apple_signed", lambda pkg: Path(pkg).read_bytes() == KDK_PKG_BYTES),
             ("disk_info", lambda path: {"Internal": False, "MountPoint": str(self.usb)}),
         ]:
@@ -72,6 +81,19 @@ class RescueTests(unittest.TestCase):
         patcher = patch.object(rescue.urllib.request, "urlopen", fake_urlopen)
         patcher.start()
         self.addCleanup(patcher.stop)
+
+    def write_config(self, model="MacBookPro11,3", product="", board="", update=False, spoof=""):
+        config = {
+            "#Revision": {"Original-Model": model},
+            "NVRAM": {"Add": {rescue.OCLP_GUID: {"OCLP-Model": model, "OCLP-Version": "3.0.0"}}},
+            "PlatformInfo": {"DataHub": {"SystemProductName": product, "BoardProduct": board},
+                             "Generic": {"SystemProductName": spoof}, "UpdateDataHub": update,
+                             "UpdateSMBIOS": bool(spoof)},
+        }
+        (self.efi / "EFI/OC/config.plist").write_bytes(plistlib.dumps(config))
+
+    def config(self):
+        return plistlib.loads((self.efi / "EFI/OC/config.plist").read_bytes())
 
     def run_main(self, *extra):
         out = io.StringIO()
@@ -220,6 +242,74 @@ class RescueTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("free", out)
         self.assertFalse((self.packages() / "AutoPkg-Assets.pkg").exists())
+
+    def test_empty_datahub_is_filled_with_the_built_models_real_values(self):
+        code, out = self.run_main()
+        self.assertEqual(code, 0, out)
+        platform = self.config()["PlatformInfo"]
+        self.assertEqual(platform["DataHub"], {"SystemProductName": "MacBookPro11,3", "BoardProduct": "Mac-2BD1B31983FE1663"})
+        self.assertIs(platform["UpdateDataHub"], True)
+        backups = list((self.efi / "EFI/OC").glob("config.before-autopatch-rescue-*.plist"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(plistlib.loads(backups[0].read_bytes())["PlatformInfo"]["DataHub"]["BoardProduct"], "")
+
+    def test_board_id_follows_the_model_oclp_built_for(self):
+        self.write_config(model="iMac18,2")
+        code, _ = self.run_main()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["BoardProduct"], "Mac-77F17D7DA9285301")
+
+    def test_correct_datahub_is_not_rewritten(self):
+        self.write_config(product="MacBookPro11,3", board="Mac-2BD1B31983FE1663", update=True)
+        code, out = self.run_main()
+        self.assertEqual(code, 0)
+        self.assertIn("DataHub: OK", out)
+        self.assertEqual(list((self.efi / "EFI/OC").glob("config.before-*")), [])
+
+    def test_spoofed_build_is_left_alone(self):
+        self.write_config(spoof="MacBookPro14,1")
+        code, out = self.run_main()
+        self.assertEqual(code, 0)
+        self.assertIn("left alone", out)
+        self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["SystemProductName"], "")
+
+    def test_conflicting_datahub_value_is_never_overwritten(self):
+        self.write_config(product="MacBookPro11,3", board="Mac-SOMETHINGELSE")
+        code, out = self.run_main()
+        self.assertEqual(code, 2)
+        self.assertIn("review it rather than overwrite", out)
+        self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["BoardProduct"], "Mac-SOMETHINGELSE")
+
+    def test_config_not_built_by_oclp_stops(self):
+        (self.efi / "EFI/OC/config.plist").write_bytes(plistlib.dumps({"PlatformInfo": {"DataHub": {}}}))
+        code, out = self.run_main()
+        self.assertEqual(code, 2)
+        self.assertIn("Build and Install OpenCore", out)
+
+    def test_missing_opencore_on_efi_stops(self):
+        (self.efi / "EFI/OC/config.plist").unlink()
+        code, out = self.run_main()
+        self.assertEqual(code, 2)
+        self.assertIn("no OpenCore yet", out)
+
+    def test_check_reports_missing_datahub_without_writing(self):
+        self.run_main("--packages-only")
+        code, out = self.run_main("--check")
+        self.assertEqual(code, 1)
+        self.assertIn("DataHub: MISSING", out)
+        self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["SystemProductName"], "")
+
+    def test_packages_only_skips_efi(self):
+        code, out = self.run_main("--packages-only")
+        self.assertEqual(code, 0)
+        self.assertNotIn("DataHub", out)
+        self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["SystemProductName"], "")
+
+    def test_board_id_table_covers_oclp_models(self):
+        ids = rescue.board_ids()
+        self.assertGreater(len(ids), 100)
+        self.assertEqual(ids["MacBookPro11,3"], "Mac-2BD1B31983FE1663")
+        self.assertTrue(all(v.startswith("Mac-") for v in ids.values()))
 
     def test_tag_is_read_from_installed_app(self):
         app = Path(self.tmp.name) / "OpenCore-Patcher.app"

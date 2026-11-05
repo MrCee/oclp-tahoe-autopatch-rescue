@@ -138,7 +138,8 @@ It does what OCLP's code meant to do, using the correct release tag:
 2. Downloads `AutoPkg-Assets.pkg` from **that tag's** release and the `Kernel_Debug_Kit_<version>_build_<build>.dmg` from KdkSupportPkg. Each one is checked against the SHA-256 digest GitHub publishes. An HTML error page or a truncated file is rejected, not copied.
 3. Copies the package, and the Apple-signed `KernelDebugKit.pkg` from inside the disk image as `KDK.pkg`, into `Library/Packages/`, which is the same place and name OCLP uses. It verifies each copy before putting it in place.
 4. Never edits a package. Any package on the USB, or in its download cache, that doesn't match is **deleted and downloaded again**. Leftover partial copies are deleted too.
-5. Leaves files that are already correct alone, and keeps a small `.autopatch-rescue.json` record at the top of the USB so a later `--check` can verify `KDK.pkg`.
+5. Checks the OpenCore on the USB's EFI (needs `sudo`). If OCLP built it for the target Mac's own model (`OCLP-Model`, no SMBIOS spoof) and left `PlatformInfo/DataHub/SystemProductName` and `BoardProduct` empty with `UpdateDataHub` off, it sets them to that model and its board ID from OCLP's own table ([`oclp_board_ids.json`](../oclp_board_ids.json), from RC5's `smbios_data.py`). It backs up the config first, and it won't overwrite a value someone else set. This is a separate issue from the missing packages: on the MacBookPro11,3 the empty values caused the Lilu boot loop described in the [case study](CASE-STUDY.md#2-explicit-datahub-values-cleared-the-loop). OCLP RC5 still leaves them empty.
+6. Leaves files that are already correct alone, and keeps a small `.autopatch-rescue.json` record at the top of the USB so a later `--check` can verify `KDK.pkg`.
 
 Nothing is installed on the Mac you run it from, and no disk is erased. Build and install OpenCore onto the USB's EFI in OCLP as usual; the script doesn't touch the EFI.
 
