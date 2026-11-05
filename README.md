@@ -84,10 +84,6 @@ If you rebuild OpenCore in OCLP later, run the script again. Use `--packages-onl
 
 Turn on **Verbose** in OCLP's build settings before *Build and Install OpenCore* (it's off by default), so a boot loop is easy to spot. If a Mac ever booted the USB while DataHub was blank and looped, leftover NVRAM can make it misbehave for a restart or two afterwards; an NVRAM reset (Option-Command-P-R) clears it.
 
-## Booting without the USB
-
-Autopatch Rescue only fixes the **USB**. To start without it, use OCLP on the installed Mac: **Build and Install OpenCore** onto the **internal drive's EFI**. OCLP builds that config the same way, so if DataHub was missing on the USB it will most likely be missing there too, and the internal config needs the same values. Autopatch Rescue doesn't do this yet.
-
 ## Further information
 
 - [Why OCLP RC USBs miss AutoPkg-Assets.pkg and KDK.pkg](docs/OCLP-RC-ASSETS-BUG.md): logs, source references and the fix.

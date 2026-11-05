@@ -12,7 +12,7 @@ Same mid-2014 **MacBookPro11,3**. The USB was created on an iMac18,2 with the of
 | `autopatch_rescue.py` | Added RC5 `AutoPkg-Assets.pkg` (`a965871a…`) and Apple `KDK.pkg` for 25G332 from `Kernel_Debug_Kit_26.7.2_build_25G332.dmg` (`9490bd9b…`); set DataHub to `MacBookPro11,3` / `Mac-2BD1B31983FE1663` / `UpdateDataHub = true` with a config backup; ended with `PASS`. |
 | Install on the MacBook | Booted through USB EFI, installed Tahoe 26.7.2. **No "failed to obtain model information" loop.** The owner reports the installation works. |
 
-**Limits:** all three fixes were applied together, so this doesn't show which one was essential on RC5 by itself. The packages are needed by mechanism (no OCLP to auto-patch without the assets package; Modern Audio needs the KDK offline). DataHub was then tested on its own (next section). Booting without the USB (internal OpenCore) was not part of this test.
+**Limits:** all three fixes were applied together, so this doesn't show which one was essential on RC5 by itself. The packages are needed by mechanism (no OCLP to auto-patch without the assets package; Modern Audio needs the KDK offline). DataHub was then tested on its own (next section).
 
 ## 2026-11-05: control test with DataHub left blank
 
@@ -39,5 +39,4 @@ Same USB and same MacBookPro11,3. Only the OpenCore config was changed: OCLP's o
 ## Not covered
 
 - Other Mac models on real hardware. The packages are missing from every RC-built USB whatever the model; the DataHub fix has only been proven on the MacBookPro11,3.
-- Booting without the USB (OpenCore on the internal drive).
 - Final OCLP releases after 3.0.0; `--check` will show whether they need anything.
