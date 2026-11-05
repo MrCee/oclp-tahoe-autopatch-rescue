@@ -25,8 +25,8 @@ OCLP's own model table. Empty values caused "Lilu: failed to obtain model
 information" boot loops on a MacBookPro11,3. The config is backed up first,
 and values that are already set are never overwritten.
 
-  sudo python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"           # fix
-  sudo python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe" --check   # report only
+  python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"           # fix (asks for your password)
+  python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe" --check   # report only
 """
 import argparse
 import contextlib
@@ -456,6 +456,10 @@ def main(argv=None):
     parser.add_argument("--cache", type=Path, default=CACHE, help=f"Download cache (default: {CACHE})")
     parser.add_argument("--packages-only", action="store_true", help="Skip the OpenCore DataHub check on the EFI")
     args = parser.parse_args(argv)
+    if argv is None and not args.packages_only and os.geteuid() != 0:
+        # The USB's EFI partition can only be opened as administrator, so ask once, up front.
+        say("Autopatch Rescue needs your Mac password to open the USB's EFI partition.")
+        os.execv("/usr/bin/sudo", ["sudo", sys.executable, str(Path(__file__).resolve())] + sys.argv[1:])
     try:
         want = plan(args.usb, args.oclp_tag or installed_oclp_tag(), args.kdk_build)
         if args.check:
