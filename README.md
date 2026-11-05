@@ -4,14 +4,30 @@
 ![macOS: Tahoe 26](https://img.shields.io/badge/macOS-Tahoe%2026-111827)
 ![Any OCLP Mac](https://img.shields.io/badge/model-any%20OCLP%20Mac-2563eb)
 
-**If you've landed here, OCLP's normal process didn't work for you.** You built a Tahoe installer USB with an OCLP 3.0.0 release candidate, installed macOS, and either it got stuck in a boot loop or nothing was patched afterwards, so Wi-Fi, graphics acceleration or audio don't work.
+**If you've landed here, OCLP's normal process didn't work for you.** You made a Tahoe installer USB with an OCLP 3.0.0 release candidate, installed macOS from it, and either the Mac got stuck in a boot loop or nothing was patched afterwards (no Wi-Fi, graphics acceleration or audio).
 
-**Autopatch Rescue is an alternative way to finish the USB installer.** Run it on the USB, then install again. It checks the USB and adds what the normal process should have put there:
+Autopatch Rescue fixes the **USB installer**. You then use the fixed USB to install Tahoe onto a clean, formatted drive.
 
-- **`AutoPkg-Assets.pkg` and `KDK.pkg`.** OCLP 3.0.0 release candidates build USBs without them and still report success, so OCLP never installs itself or patches after the install. Seen with RC5; RC1, RC2 and RC3 contain the same download code. The assets package and the KDK disk image are downloaded from the official GitHub releases and checked against GitHub's published SHA-256 digests, and the `KDK.pkg` taken from the image must be Apple-signed.
-- **The OpenCore DataHub model and board ID**, only if they're missing. Without them, a Mac can loop at boot on "failed to obtain model information" (OCLP calls this the Lilu race condition).
+## What it fixes
 
-**Before you start:** plan on a **clean install**. Back up, then in the installer's Disk Utility **erase the target internal drive** (APFS, GUID Partition Map) before installing Tahoe from the adjusted USB. That's how this was tested.
+- **Missing `AutoPkg-Assets.pkg` and `KDK.pkg`.** OCLP is meant to put these on the USB, so that after macOS installs, OCLP installs itself and root patches automatically. A bug in every 3.0.0 release candidate leaves them off and still reports success. [Why this happens](docs/OCLP-RC-ASSETS-BUG.md).
+- **Missing OpenCore DataHub model and board ID.** Without them, a Mac can loop at boot on "failed to obtain model information". OCLP only fills these in for some Macs ([details below](#when-datahub-is-written)).
+
+Everything else OCLP built is left exactly as it is.
+
+## Before you start
+
+- **Plan a clean install.** Back up the target Mac. You'll erase its drive during the install.
+- On the Mac you're preparing the USB on, in OCLP:
+  1. Set **Settings → Target Model** to the Mac you'll install on.
+  2. Turn on **Verbose** in the build settings (off by default), so a boot loop shows on screen.
+  3. Run **Create macOS Installer** and write Tahoe to the USB.
+  4. Run **Build and Install OpenCore** onto the USB.
+- You need Python 3.9+, internet access, and about 2.2 GB free on the USB.
+
+## Fix the USB
+
+With the USB still plugged in:
 
 ```bash
 git clone https://github.com/MrCee/oclp-tahoe-autopatch-rescue.git
@@ -19,20 +35,15 @@ cd oclp-tahoe-autopatch-rescue
 python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"
 ```
 
-**The right order:** in OCLP, set **Settings → Target Model** to the Mac you'll install on, run **Create macOS Installer**, then **Build and Install OpenCore** onto the USB. *Then* run Autopatch Rescue on the same Mac, before you eject. It needs Python 3.9+, internet access and about 2.2 GB free on the USB.
+What happens:
 
-### What the script does
+1. It **asks for your Mac password**, which it needs to open the USB's EFI partition.
+2. It **shows what the USB is for:** the macOS version, the OCLP release, and the Mac OpenCore was built for, by name and model identifier.
+3. It **checks** `AutoPkg-Assets.pkg`, `KDK.pkg` and the DataHub values, and shows each as OK or MISSING.
+4. If something is missing, it **asks you to confirm** that this is the Mac you're installing on. Answer `n` and nothing is changed.
+5. It **fixes only what's missing**, then checks again and ends with `PASS`.
 
-1. **Asks for your Mac password**, which it needs to open the USB's EFI partition.
-2. **Reads the USB and shows what it's for:** the macOS installer version, the OCLP release, and the Mac OpenCore was built for (by its name and model identifier). It also says whether Verbose boot is on.
-3. **Checks three things** and shows each as OK or MISSING: `AutoPkg-Assets.pkg`, `KDK.pkg` and the DataHub values.
-4. If something is missing, it **asks you to confirm** that this is the Mac you're installing on before changing anything. Answer `n` and nothing is touched. (`--yes` skips the question; `--check` only reports.)
-5. **Fixes only what's missing:** it downloads the packages (checked against GitHub's published SHA-256 digests; the `KDK.pkg` must be Apple-signed) and writes the DataHub values (below). A package that doesn't match is deleted and downloaded again, never edited.
-6. Checks again and ends with **`PASS: the USB is ready.`**
-
-It leaves everything else OCLP built untouched, including OpenCore's kexts, patches and settings. Nothing is installed on the Mac you run it on.
-
-Example: a USB made by an OCLP release candidate, before the fix (the Mac shown is just an example):
+For example, on a USB straight from an OCLP release candidate (the Mac shown is just an example):
 
 ```text
 This USB
@@ -50,39 +61,40 @@ This USB is set up for: iMac (Retina 4K, 21.5-inch, 2017) (iMac18,2)
 Is that the Mac you're installing on, and should the changes above be made? [y/N]
 ```
 
+Options: `--check` reports without changing anything, `--yes` skips the question, and `--packages-only` skips the DataHub step. If you rebuild OpenCore in OCLP later, run the script again.
+
+**How the packages are handled:** the assets package comes from the OCLP release you have installed, and the KDK from Dortania's KdkSupportPkg for your installer's macOS build. Both downloads are checked against the SHA-256 digests GitHub publishes, and the `KDK.pkg` taken from the KDK disk image must be Apple-signed. A package already on the USB that doesn't match is deleted and downloaded again, never edited. Nothing is installed on the Mac you run the script on.
+
 ### When DataHub is written
 
-Every time it runs, the script reads the OpenCore config on the USB's EFI (`EFI/OC/config.plist`) and decides:
+The script reads the OpenCore config on the USB's EFI (`EFI/OC/config.plist`) every time it runs:
 
 | What it finds | What it does |
 | :--- | :--- |
 | No OpenCore, or a config OCLP didn't build | **Stops.** Run *Build and Install OpenCore* in OCLP first. |
-| OCLP built it **spoofed** as another model | **Leaves it alone.** OCLP already set DataHub for the spoofed model. |
-| Model, board ID and `UpdateDataHub` already set correctly | **Changes nothing** (`DataHub: OK`). |
-| Model or board ID **empty**, or `UpdateDataHub` off | **Writes only what's missing:** the model OCLP built for, that model's board ID from OCLP's own model table ([`oclp_models.json`](oclp_models.json)), and `UpdateDataHub = true`. The config is backed up first. |
+| OCLP built it **spoofed** as another model | **Leaves it alone.** OCLP has already set DataHub for that model. |
+| Model, board ID and `UpdateDataHub` already set correctly | **Changes nothing.** |
+| Model or board ID **empty**, or `UpdateDataHub` off | **Writes only what's missing:** the model OCLP built for, that model's board ID from OCLP's own model table ([`oclp_models.json`](oclp_models.json)), and `UpdateDataHub = true`. It backs up the config first. |
 | A **different** value is already there | **Stops without overwriting**, so you can check it. |
 
-**Why it can be missing:** OCLP fills in the DataHub board ID itself to prevent this boot loop, but only on Ivy Bridge and older Macs (roughly 2012 and earlier), or when you build with SMBIOS spoofing. A newer Mac built as itself gets both values empty. The script fills in the Mac's own real values, never a different model, so it's safe on Macs that would have booted without them.
+**Why it can be missing:** OCLP fills in the DataHub board ID itself to prevent this boot loop, but only on Ivy Bridge and older Macs (roughly 2012 and earlier), or when you build with SMBIOS spoofing. A newer Mac built as itself gets both values empty. The script only ever writes the Mac's own real values, so it's safe on Macs that would have booted without them.
 
-If you rebuild OpenCore in OCLP later, run the script again. Use `--packages-only` to skip the DataHub step.
+## Install on the target Mac
 
-**Why this happens, with logs and source references:** [docs/OCLP-RC-ASSETS-BUG.md](docs/OCLP-RC-ASSETS-BUG.md). In short, OCLP looks for a GitHub release named `3.0.0` that doesn't exist during the RC phase. Its fallback saves a nightly.link 404 page as the package, and the step that copies the package and the KDK then quits silently.
-
-| Situation | What to do |
-| :--- | :--- |
-| `Library/Packages` on the USB is missing or empty | Run Autopatch Rescue. |
-| Boot loops on "failed to obtain model information" | Run Autopatch Rescue to fill in the DataHub values, or `--check` to see them. |
-| You use a final OCLP release | The package download works on final releases. Run `--check` to see whether anything else is missing. |
-| After the final 3.0.0 is published | Update OCLP first. An RC app would then download the final release's assets, which don't match it. |
-
-## Installing on the target Mac
-
-1. Plug the USB into the Mac you built it for, hold **Option** at power-on and choose **EFI Boot** (the USB's), then **Install macOS Tahoe**.
-2. **Erase the target drive first:** open **Disk Utility** from the installer, erase the internal drive (APFS; GUID Partition Map if you erase the whole disk), then quit Disk Utility and choose **Install macOS Tahoe** onto it. This deletes everything on it, so back up first.
+1. Plug the fixed USB into the Mac you built it for. Hold **Option** at power-on and choose the USB's **EFI Boot**, then **Install macOS Tahoe**.
+2. **Erase the drive:** open **Disk Utility** from the installer, erase the target drive (APFS; choose GUID Partition Map if you erase the whole disk), then quit Disk Utility and install Tahoe onto it.
 3. At **every restart**, hold Option and choose the USB's **EFI Boot** again: the **macOS Installer** entry while installing, then **Macintosh HD** once it's finished.
 4. Near the end, the installer runs the two packages: OCLP installs itself, root patches, and restarts once more. Afterwards, OCLP's *Post-Install Root Patch* screen should show today's date.
 
-Turn on **Verbose** in OCLP's build settings before *Build and Install OpenCore* (it's off by default), so a boot loop is easy to spot. If a Mac ever booted the USB while DataHub was blank and looped, leftover NVRAM can make it misbehave for a restart or two afterwards; an NVRAM reset (Option-Command-P-R) clears it.
+## Troubleshooting
+
+| Situation | What to do |
+| :--- | :--- |
+| `Library/Packages` on the USB is missing or empty | Run the script. |
+| Boot loop on "failed to obtain model information" | Run the script to fill in the DataHub values, or `--check` to see them. |
+| After a blank-DataHub boot loop, the Mac misbehaves for a restart or two | Reset NVRAM (hold Option-Command-P-R at power-on). |
+| You use a final (non-RC) OCLP release | The package download works on final releases. Run `--check` to see whether anything else is missing. |
+| The final 3.0.0 has been published | Update OCLP first. An RC app would then download the final release's assets, which don't match it. |
 
 ## Further information
 
