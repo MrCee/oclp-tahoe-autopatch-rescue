@@ -98,6 +98,27 @@ On Tahoe it's strictly required for any Mac without a T2 chip. That's because of
 
 `MetallibSupportPkg` is **not** needed on Tahoe. The Haswell/Kepler predicates require it only for `sequoia <= xnu < tahoe`.
 
+## Worked example: why a MacBookPro11,3 needs both
+
+Every OCLP Mac needs root patches after a fresh install. The question for any model is **which patches, and whether they can run on first boot**. Here is how it works out for a mid-2014 15-inch MacBook Pro (Intel Iris Pro + NVIDIA GT 750M) on Tahoe, using the RC5 patch definitions:
+
+| Patch set | Why it applies to this Mac | Native until | Needs KDK? |
+| :--- | :--- | :--- | :--- |
+| Modern Wireless | Broadcom `AirportBrcmNIC` Wi-Fi ([`modern_wireless.py`](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/3.0.0-rc.5/opencore_legacy_patcher/sys_patch/patchsets/hardware/networking/modern_wireless.py)) | Ventura | No |
+| Intel Haswell graphics | Iris Pro 5200 ([`intel_haswell.py`](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/3.0.0-rc.5/opencore_legacy_patcher/sys_patch/patchsets/hardware/graphics/intel_haswell.py)) | Monterey | No |
+| NVIDIA Kepler graphics | GT 750M ([`nvidia_kepler.py`](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/3.0.0-rc.5/opencore_legacy_patcher/sys_patch/patchsets/hardware/graphics/nvidia_kepler.py)) | Big Sur / early Monterey | No |
+| Modern Audio | No T2 chip (`SecureBootModel: None`) | Sequoia | **Yes, on Tahoe** |
+
+Without the two packages, the chain breaks:
+
+1. **No `AutoPkg-Assets.pkg`**: after the install, OCLP isn't on the Mac and no patching runs. The desktop has no Wi-Fi, no graphics acceleration and no audio.
+2. **Patching by hand needs OCLP and the KDK**: you'd have to get the OCLP installer onto the Mac, and root patching then has to download the 25G332 KDK for Modern Audio.
+3. **But there's no network**: Wi-Fi is one of the things waiting to be patched, and this MacBook has no Ethernet port. Without a Thunderbolt Ethernet adapter or a USB Wi-Fi dongle, it can't download anything.
+
+With both packages on the USB, the installer installs OCLP and the KDK, root patches everything above on first boot **offline**, and restarts into a working system. The earlier RC3 install on this machine hit exactly this: the patch record showed Modern Wireless only, with the graphics patches missing and a failed KDK lookup ([case study](CASE-STUDY.md#4-logs-identified-a-missing-matching-kdk)).
+
+**For other Macs:** the missing-package bug is the same, but the patch list isn't. A Mac with built-in Ethernet can recover by patching manually; a Wi-Fi-only Mac usually can't. The KDK matters whenever any patch set returns `requires_kernel_debug_kit` for your macOS version. On Tahoe that includes Modern Audio for every Mac without a T2. Adding both packages, as OCLP intends, covers all models.
+
 ## How to tell whether your USB is affected
 
 1. Look in **`/Volumes/Install macOS …/Library/Packages/`**. It should contain `AutoPkg-Assets.pkg` and `KDK.pkg`. If the folder doesn't exist, your USB was hit.
