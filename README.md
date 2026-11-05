@@ -16,7 +16,7 @@ python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"
 
 **The right order:** in OCLP, set **Settings → Target Model** to the Mac you'll install on, run **Create macOS Installer**, then **Build and Install OpenCore** onto the USB. *Then* run Autopatch Rescue on the same Mac, before you eject. It needs Python 3.9+, internet access and about 2.2 GB free on the USB. It reads the installer's macOS build and your installed OCLP release (for example `3.0.0-rc.5`). It skips files that are already correct, never edits a package (anything that doesn't match is deleted and downloaded again), and stops on anything it can't verify. Add `--check` to report without changing anything.
 
-It also checks the OpenCore on the USB's EFI each time it runs, and writes the **DataHub model and board ID only if they're missing**. If OCLP built it for the target Mac's own model and left them empty, it fills in that model's real values from OCLP's own model table. If they're already correct it changes nothing. Empty values caused the `Lilu: failed to obtain model information` boot loop on a MacBookPro11,3. It backs up `config.plist` first, never overwrites values that are already set, and leaves spoofed builds alone. Opening the EFI is why it asks for your Mac password; use `--packages-only` to skip this step. If you rebuild OpenCore in OCLP later, run it again.
+It also checks the OpenCore on the USB's EFI each time it runs, and writes the **DataHub model and board ID only if they're missing**. If OCLP built it for the target Mac's own model and left them empty, it fills in that model's real values from OCLP's own model table. If they're already correct it changes nothing. On a MacBookPro11,3, empty values cause an immediate "failed to obtain model information" boot loop. That was seen with OCLP RC3 and **proven again with RC5** by booting the same USB with DataHub left blank. It backs up `config.plist` first, never overwrites values that are already set, and leaves spoofed builds alone. Opening the EFI is why it asks for your Mac password; use `--packages-only` to skip this step. If you rebuild OpenCore in OCLP later, run it again.
 
 **Why this happens, with logs and source references:** [docs/OCLP-RC-ASSETS-BUG.md](docs/OCLP-RC-ASSETS-BUG.md). In short, OCLP looks for a GitHub release named `3.0.0` that doesn't exist during the RC phase. Its fallback saves a nightly.link 404 page as the package, and the step that copies the package and the KDK then quits silently.
 
@@ -24,7 +24,7 @@ It also checks the OpenCore on the USB's EFI each time it runs, and writes the *
 | :--- | :--- |
 | `Library/Packages` on the USB is missing or empty | Run Autopatch Rescue. |
 | Boot loops on `Lilu … failed to obtain model information` | Run Autopatch Rescue to fill in the DataHub values, or `--check` to see them. |
-| Tested on hardware | MacBookPro11,3, OCLP 3.0.0-rc.5, Tahoe 26.7.2 (25G332), 2026-11-05: installed with no Lilu loop and working. |
+| Tested on hardware | MacBookPro11,3, OCLP 3.0.0-rc.5, Tahoe 26.7.2 (25G332), 2026-11-05: with Autopatch Rescue, installed with no loop and working. With DataHub left blank (everything else the same), it looped on "failed to obtain model information" straight away, every proper USB EFI boot. |
 | You use a final OCLP release (e.g. 2.5.1) | Not affected, but `--check` confirms it. |
 | After the final 3.0.0 is published | Update OCLP first. An RC app would then download the final release's assets, which don't match it. |
 

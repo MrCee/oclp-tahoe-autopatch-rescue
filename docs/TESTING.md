@@ -22,7 +22,19 @@ Same mid-2014 **MacBookPro11,3**. The USB was created on an iMac18,2 with the of
 | `autopatch_rescue.py` | Added RC5 `AutoPkg-Assets.pkg` (`a965871a…`) and Apple `KDK.pkg` for 25G332 from `Kernel_Debug_Kit_26.7.2_build_25G332.dmg` (`9490bd9b…`); set DataHub to `MacBookPro11,3` / `Mac-2BD1B31983FE1663` / `UpdateDataHub = true` with a config backup; ended with `PASS`. |
 | Install on the MacBook | Booted through USB EFI, installed Tahoe 26.7.2. **No `Lilu … failed to obtain model information` loop.** The owner reports the installation works. |
 
-**Limits:** all three fixes were applied together, so this doesn't show which one was essential on RC5 by itself. The packages are needed by mechanism (no OCLP to auto-patch without the assets package; Modern Audio needs the KDK offline). DataHub was required on RC3 and wasn't retested empty on RC5. Booting without the USB (internal OpenCore) was not part of this test, and the older `finish_install.py` is still tied to 26.7.1.
+**Limits:** all three fixes were applied together, so this doesn't show which one was essential on RC5 by itself. The packages are needed by mechanism (no OCLP to auto-patch without the assets package; Modern Audio needs the KDK offline). DataHub was then tested on its own (next section). Booting without the USB (internal OpenCore) was not part of this test, and the older `finish_install.py` is still tied to 26.7.1.
+
+### 2026-11-05: control test with DataHub left blank
+
+Same USB and same MacBookPro11,3. Only the OpenCore config was changed: OCLP's original was put back (`DataHub/SystemProductName` and `BoardProduct` empty, `UpdateDataHub` false). Both packages stayed on the USB.
+
+| Step | Result |
+| :--- | :--- |
+| Boot USB EFI → installer, DataHub blank | **Immediate loop on "failed to obtain model information".** Repeated on each proper boot (Option → the USB's EFI Boot). One earlier attempt behaved differently and wasn't counted; it most likely didn't start through the USB's OpenCore. |
+| Put DataHub back with the published `autopatch_rescue.py` (fresh clone of `main`) | Detected `DataHub: MISSING`, set `MacBookPro11,3` / `Mac-2BD1B31983FE1663` / `UpdateDataHub = true`, backed up the blank config, ended with `PASS`; packages untouched. |
+| MacBook afterwards, without the USB | Looped at first, then started normally after two restarts. Most likely NVRAM state written during the blank-DataHub boots and the older internal OpenCore; an NVRAM reset (Option-Command-P-R) clears such leftovers. |
+
+**Conclusion:** on this MacBookPro11,3 with OCLP 3.0.0-rc.5 and Tahoe 26.7.2, the DataHub model and board ID are required. With them blank the USB can't boot; with them filled in, the same USB installed Tahoe successfully. A boot from the USB after the published script restored them was not repeated in this session.
 
 ## Automated fixture checks
 
