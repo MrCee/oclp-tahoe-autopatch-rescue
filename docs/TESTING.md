@@ -30,6 +30,7 @@ The script builds and ad-hoc signs the x86_64 native utility, checks the Bash sc
 | Optional Recovery preparation and EFI discovery | 19 | Disposable USB/EFI fixtures; package building mocked, native deployment hashes executed; no real disks |
 | Default installer-only preparation and boot layout detection | 25 | Package/EFI fixtures and real Python deployment; automatic KDK image acquisition mocked; compiler/extraction prohibited; old-USB finishing bundle upgrade |
 | Preparation prerequisites | 2 | Installer-only mode needs no compiler; optional mode reports absent compiler clearly |
+| Autopatch Rescue (any model) | 18 | Fake installer USB and GitHub releases; no network or disk images. Covers adding both packages, skipping correct files, `--check` without writes, a replaced wrong package, corrupt and HTML-error downloads, missing digests, a missing KDK release and `--kdk-build`, an unsigned KDK, internal or non-installer volumes, pre-Big Sur installers, low space, and reading the OCLP tag |
 | Download, copy progress and transfer integrity | 8 | Mocked responses; known/unknown sizes, scrolling bar, speed/ETA, large-file hash/copy progress, preserved copy metadata, truncated/corrupt transfers and interruption cleanup |
 | Internal OpenCore config handover | 14 | Disposable EFI; disk/model/build commands mocked; no physical disk mounted or changed |
 | USB finishing bundle and tools bootstrap | 13 | Bundled module imports, hashes, backups, reuse and symlink guards; fake Apple update/install commands; no real tools installed |

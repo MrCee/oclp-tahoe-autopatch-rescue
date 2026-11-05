@@ -8,6 +8,7 @@ for file in kit/*.sh; do /bin/bash -n "$file"; done
 /bin/bash -n kit/finish-install.command
 python3 -m unittest discover -s tests -p 'test_prepar*.py' -v
 python3 -m unittest discover -s tests -p test_downloads.py -v
+python3 -m unittest discover -s tests -p test_autopatch_rescue.py -v
 python3 -m unittest discover -s tests -p test_finish_install.py -v
 python3 -m unittest discover -s tests -p test_finish_bundle.py -v
 python3 tests/test_repair.py
