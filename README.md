@@ -9,8 +9,8 @@
 **Autopatch Rescue** checks the USB and adds exactly the two official files OCLP should have added, verified against GitHub's published SHA-256 digests.
 
 ```bash
-git clone https://github.com/MrCee/oclp-tahoe-mbp113-usb-preparation.git
-cd oclp-tahoe-mbp113-usb-preparation
+git clone https://github.com/MrCee/oclp-tahoe-autopatch-rescue.git
+cd oclp-tahoe-autopatch-rescue
 python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"
 ```
 
@@ -77,8 +77,8 @@ Already created the installer? Select the correct target before building/install
 **On the working Mac, open Terminal:**
 
 ```bash
-git clone https://github.com/MrCee/oclp-tahoe-mbp113-usb-preparation.git
-cd oclp-tahoe-mbp113-usb-preparation
+git clone https://github.com/MrCee/oclp-tahoe-autopatch-rescue.git
+cd oclp-tahoe-autopatch-rescue
 sudo python3 prepare_usb.py --usb "/Volumes/Install macOS Tahoe"
 ```
 
