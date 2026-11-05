@@ -5,6 +5,6 @@ OCLP Tahoe Autopatch Rescue downloads official packages published by Dortania an
 - [OpenCore Legacy Patcher](https://github.com/dortania/OpenCore-Legacy-Patcher) ([license](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/3.0.0-rc.5/LICENSE.txt))
 - [KdkSupportPkg releases](https://github.com/dortania/KdkSupportPkg/releases)
 - [Acidanthera OpenCorePkg](https://github.com/acidanthera/OpenCorePkg)
-- `oclp_board_ids.json` lists each model's board ID as published in [OCLP 3.0.0-rc.5 `smbios_data.py`](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/3.0.0-rc.5/opencore_legacy_patcher/datasets/smbios_data.py).
+- `oclp_models.json` lists each model's board ID and name as published in [OCLP 3.0.0-rc.5 `smbios_data.py`](https://github.com/dortania/OpenCore-Legacy-Patcher/blob/3.0.0-rc.5/opencore_legacy_patcher/datasets/smbios_data.py).
 
 Neither Dortania nor the upstream authors have endorsed this independent tool. Apple's installer and KDK files are not relicensed by this repository.

@@ -34,7 +34,7 @@ Same USB and same MacBookPro11,3. Only the OpenCore config was changed: OCLP's o
 
 | Suite | Checks | Method |
 | :--- | ---: | :--- |
-| Autopatch Rescue | 31 | Fake installer USB, EFI and GitHub releases; no network, disk images or real disks. Covers adding both packages, skipping correct files, `--check` without writes, deleting wrong packages, cached downloads and partial copies before re-downloading, corrupt and HTML-error downloads, missing digests, a missing KDK release and `--kdk-build`, an unsigned KDK, internal or non-installer volumes, pre-Big Sur installers, low space, reading the OCLP tag, and the EFI DataHub step (filling empty values from the built model, board ID per model, keeping correct or spoofed configs, refusing to overwrite conflicting values or non-OCLP configs, `--check` and `--packages-only`). |
+| Autopatch Rescue | 36 | Fake installer USB, EFI and GitHub releases; no network, disk images or real disks. Covers adding both packages, skipping correct files, `--check` without writes, deleting wrong packages, cached downloads and partial copies before re-downloading, corrupt and HTML-error downloads, missing digests, a missing KDK release and `--kdk-build`, an unsigned KDK, internal or non-installer volumes, pre-Big Sur installers, low space, reading the OCLP tag, and the EFI DataHub step (filling empty values from the built model, board ID per model, keeping correct or spoofed configs, refusing to overwrite conflicting values or non-OCLP configs, `--check` and `--packages-only`), the summary report, and the confirmation question (answering no changes nothing; no terminal without `--yes` changes nothing). |
 
 ## Not covered
 

@@ -1,0 +1,494 @@
+{
+  "source": "OpenCore Legacy Patcher 3.0.0-rc.5, opencore_legacy_patcher/datasets/smbios_data.py (\"Board ID\" and \"Marketing Name\" per model)",
+  "url": "https://github.com/dortania/OpenCore-Legacy-Patcher/blob/3.0.0-rc.5/opencore_legacy_patcher/datasets/smbios_data.py",
+  "models": {
+    "AAPLJ53,1": {
+      "board_id": "Mac-C08A65A66A9A3BA2",
+      "name": "AAPLJ53,1"
+    },
+    "MacBook1,1": {
+      "board_id": "Mac-F4208CC8",
+      "name": "MacBook (13-inch)"
+    },
+    "MacBook10,1": {
+      "board_id": "Mac-EE2EBD4B90B839A8",
+      "name": "MacBook (Retina, 12-inch, 2017)"
+    },
+    "MacBook2,1": {
+      "board_id": "Mac-F4208CA9",
+      "name": "MacBook (13-inch Late 2006)"
+    },
+    "MacBook3,1": {
+      "board_id": "Mac-F22788C8",
+      "name": "MacBook (13-inch Late 2007)"
+    },
+    "MacBook4,1": {
+      "board_id": "Mac-F22788A9",
+      "name": "MacBook (13-inch, Early 2008)"
+    },
+    "MacBook5,1": {
+      "board_id": "Mac-F42D89C8",
+      "name": "MacBook (13-inch, Aluminum, Late 2008)"
+    },
+    "MacBook5,2": {
+      "board_id": "Mac-F22788AA",
+      "name": "MacBook (13-inch, Mid 2009)"
+    },
+    "MacBook6,1": {
+      "board_id": "Mac-F22C8AC8",
+      "name": "MacBook (13-inch, Late 2009)"
+    },
+    "MacBook7,1": {
+      "board_id": "Mac-F22C89C8",
+      "name": "MacBook (13-inch, Mid 2010)"
+    },
+    "MacBook8,1": {
+      "board_id": "Mac-BE0E8AC46FE800CC",
+      "name": "MacBook (Retina, 12-inch, Early 2015)"
+    },
+    "MacBook9,1": {
+      "board_id": "Mac-9AE82516C7C6B903",
+      "name": "MacBook (Retina, 12-inch, Early 2016)"
+    },
+    "MacBookAir1,1": {
+      "board_id": "Mac-F42C8CC8",
+      "name": "MacBook Air (Original)"
+    },
+    "MacBookAir2,1": {
+      "board_id": "Mac-F42D88C8",
+      "name": "MacBook Air (Mid 2009)"
+    },
+    "MacBookAir3,1": {
+      "board_id": "Mac-942452F5819B1C1B",
+      "name": "MacBook Air (11-inch, Late 2010)"
+    },
+    "MacBookAir3,2": {
+      "board_id": "Mac-942C5DF58193131B",
+      "name": "MacBook Air (13-inch, Late 2010)"
+    },
+    "MacBookAir4,1": {
+      "board_id": "Mac-C08A6BB70A942AC2",
+      "name": "MacBook Air (11-inch, Mid 2011)"
+    },
+    "MacBookAir4,2": {
+      "board_id": "Mac-742912EFDBEE19B3",
+      "name": "MacBook Air (13-inch, Mid 2011)"
+    },
+    "MacBookAir5,1": {
+      "board_id": "Mac-66F35F19FE2A0D05",
+      "name": "MacBook Air (11-inch, Mid 2012)"
+    },
+    "MacBookAir5,2": {
+      "board_id": "Mac-2E6FAB96566FE58C",
+      "name": "MacBook Air (13-inch, Mid 2012)"
+    },
+    "MacBookAir6,1": {
+      "board_id": "Mac-35C1E88140C3E6CF",
+      "name": "MacBook Air (11-inch, Mid 2013)"
+    },
+    "MacBookAir6,2": {
+      "board_id": "Mac-7DF21CB3ED6977E5",
+      "name": "MacBook Air (13-inch, Mid 2013)"
+    },
+    "MacBookAir7,1": {
+      "board_id": "Mac-9F18E312C5C2BF0B",
+      "name": "MacBook Air (11-inch, Early 2015)"
+    },
+    "MacBookAir7,2": {
+      "board_id": "Mac-937CB26E2E02BB01",
+      "name": "MacBook Air (13-inch, Early 2015)"
+    },
+    "MacBookAir8,1": {
+      "board_id": "Mac-827FAC58A8FDFA22",
+      "name": "MacBook Air (Retina, 13-inch, 2018)"
+    },
+    "MacBookAir8,2": {
+      "board_id": "Mac-226CB3C6A851A671",
+      "name": "MacBook Air (Retina, 13-inch, 2019)"
+    },
+    "MacBookAir9,1": {
+      "board_id": "Mac-0CFF9C7C2B63DF8D",
+      "name": "MacBook Air (Retina, 13-inch, 2020)"
+    },
+    "MacBookPro1,1": {
+      "board_id": "Mac-F425BEC8",
+      "name": "MacBook Pro (original)"
+    },
+    "MacBookPro1,2": {
+      "board_id": "Mac-F42DBEC8",
+      "name": "MacBook Pro (17-inch)"
+    },
+    "MacBookPro10,1": {
+      "board_id": "Mac-C3EC7CD22292981F",
+      "name": "MacBook Pro (Retina, Mid 2012)"
+    },
+    "MacBookPro10,2": {
+      "board_id": "Mac-AFD8A9D944EA4843",
+      "name": "MacBook Pro (Retina, 13-inch, Late 2012)"
+    },
+    "MacBookPro11,1": {
+      "board_id": "Mac-189A3D4F975D5FFC",
+      "name": "MacBook Pro (Retina, 13-inch, Late 2013)"
+    },
+    "MacBookPro11,2": {
+      "board_id": "Mac-3CBD00234E554E41",
+      "name": "MacBook Pro (Retina, 15-inch, Mid 2014)"
+    },
+    "MacBookPro11,3": {
+      "board_id": "Mac-2BD1B31983FE1663",
+      "name": "MacBook Pro (Retina, 15-inch, Late 2013)"
+    },
+    "MacBookPro11,4": {
+      "board_id": "Mac-06F11FD93F0323C5",
+      "name": "MacBook Pro (Retina, 15-inch, Mid 2015)"
+    },
+    "MacBookPro11,5": {
+      "board_id": "Mac-06F11F11946D27C5",
+      "name": "MacBook Pro (Retina, 15-inch, Mid 2014)"
+    },
+    "MacBookPro12,1": {
+      "board_id": "Mac-E43C1C25D4880AD6",
+      "name": "MacBook Pro (Retina, 13-inch, Early 2015)"
+    },
+    "MacBookPro13,1": {
+      "board_id": "Mac-473D31EABEB93F9B",
+      "name": "MacBook Pro (13-inch, 2016, Two Thunderbolt 3 ports)"
+    },
+    "MacBookPro13,2": {
+      "board_id": "Mac-66E35819EE2D0D05",
+      "name": "MacBook Pro (13-inch, 2016, Four Thunderbolt 3 Ports)"
+    },
+    "MacBookPro13,3": {
+      "board_id": "Mac-A5C67F76ED83108C",
+      "name": "MacBook Pro (15-inch, 2016)"
+    },
+    "MacBookPro14,1": {
+      "board_id": "Mac-B4831CEBD52A0C4C",
+      "name": "MacBook Pro (13-inch, 2017, Two Thunderbolt 3 ports)"
+    },
+    "MacBookPro14,2": {
+      "board_id": "Mac-CAD6701F7CEA0921",
+      "name": "MacBook Pro (13-inch, 2017, Four Thunderbolt 3 Ports)"
+    },
+    "MacBookPro14,3": {
+      "board_id": "Mac-551B86E5744E2388",
+      "name": "MacBook Pro (15-inch, 2017)"
+    },
+    "MacBookPro15,1": {
+      "board_id": "Mac-937A206F2EE63C01",
+      "name": "MacBook Pro (15-inch, 2018)"
+    },
+    "MacBookPro15,2": {
+      "board_id": "Mac-827FB448E656EC26",
+      "name": "MacBook Pro (13-inch, 2018, Four Thunderbolt 3 Ports)"
+    },
+    "MacBookPro15,3": {
+      "board_id": "Mac-1E7E29AD0135F9BC",
+      "name": "MacBook Pro (15-inch, 2019)"
+    },
+    "MacBookPro15,4": {
+      "board_id": "Mac-53FDB3D8DB8CA971",
+      "name": "MacBook Pro (13-inch, 2019, Two Thunderbolt 3 ports)"
+    },
+    "MacBookPro16,1": {
+      "board_id": "Mac-E1008331FDC96864",
+      "name": "MacBook Pro (16-inch, 2019)"
+    },
+    "MacBookPro16,2": {
+      "board_id": "Mac-5F9802EFE386AA28",
+      "name": "MacBook Pro (13-inch, 2020, Four Thunderbolt 3 ports)"
+    },
+    "MacBookPro16,3": {
+      "board_id": "Mac-E7203C0F68AA0004",
+      "name": "MacBook Pro (13-inch, 2020, Two Thunderbolt 3 ports)"
+    },
+    "MacBookPro16,4": {
+      "board_id": "Mac-A61BADE1FDAD7B05",
+      "name": "MacBook Pro (16-inch, 2019)"
+    },
+    "MacBookPro2,1": {
+      "board_id": "Mac-F42189C8",
+      "name": "MacBook Pro (15-inch Core 2 Duo)"
+    },
+    "MacBookPro2,2": {
+      "board_id": "Mac-F42187C8",
+      "name": "MacBook Pro (15-inch Core 2 Duo)"
+    },
+    "MacBookPro3,1": {
+      "board_id": "Mac-F4238BC8",
+      "name": "MacBook Pro (15-inch,  2.4 2.2GHz)"
+    },
+    "MacBookPro4,1": {
+      "board_id": "Mac-F42C89C8",
+      "name": "MacBook Pro (17-inch, Early 2008)"
+    },
+    "MacBookPro5,1": {
+      "board_id": "Mac-F42D86C8",
+      "name": "MacBook Pro (15-inch, Late 2008)"
+    },
+    "MacBookPro5,2": {
+      "board_id": "Mac-F2268EC8",
+      "name": "MacBook Pro (17-inch, Early 2009)"
+    },
+    "MacBookPro5,3": {
+      "board_id": "Mac-F22587C8",
+      "name": "MacBook Pro (15-inch, 2.53GHz, Mid 2009)"
+    },
+    "MacBookPro5,4": {
+      "board_id": "Mac-F22587A1",
+      "name": "MacBook Pro (15-inch, 2.53GHz, Mid 2009)"
+    },
+    "MacBookPro5,5": {
+      "board_id": "Mac-F2268AC8",
+      "name": "MacBook Pro (13-inch, Mid 2009)"
+    },
+    "MacBookPro6,1": {
+      "board_id": "Mac-F22589C8",
+      "name": "MacBook Pro (17-inch, Mid 2010)"
+    },
+    "MacBookPro6,2": {
+      "board_id": "Mac-F22586C8",
+      "name": "MacBook Pro (15-inch, Mid 2010)"
+    },
+    "MacBookPro7,1": {
+      "board_id": "Mac-F222BEC8",
+      "name": "MacBook Pro (13-inch, Mid 2010)"
+    },
+    "MacBookPro8,1": {
+      "board_id": "Mac-94245B3640C91C81",
+      "name": "MacBook Pro (13-inch, Early 2011)"
+    },
+    "MacBookPro8,2": {
+      "board_id": "Mac-94245A3940C91C80",
+      "name": "MacBook Pro (15-inch, Early 2011)"
+    },
+    "MacBookPro8,3": {
+      "board_id": "Mac-942459F5819B171B",
+      "name": "MacBook Pro (17-inch, Early 2011)"
+    },
+    "MacBookPro9,1": {
+      "board_id": "Mac-4B7AC7E43945597E",
+      "name": "MacBook Pro (15-inch, Mid 2012)"
+    },
+    "MacBookPro9,2": {
+      "board_id": "Mac-6F01561E16C75D06",
+      "name": "MacBook Pro (13-inch, Mid 2012)"
+    },
+    "MacPro1,1": {
+      "board_id": "Mac-F4208DC8",
+      "name": "Mac Pro"
+    },
+    "MacPro2,1": {
+      "board_id": "Mac-F4208DA9",
+      "name": "Mac Pro"
+    },
+    "MacPro3,1": {
+      "board_id": "Mac-F42C88C8",
+      "name": "Mac Pro (Early 2008)"
+    },
+    "MacPro4,1": {
+      "board_id": "Mac-F221BEC8",
+      "name": "Mac Pro (Early 2009)"
+    },
+    "MacPro5,1": {
+      "board_id": "Mac-F221BEC8",
+      "name": "Mac Pro (Mid 2010)"
+    },
+    "MacPro6,1": {
+      "board_id": "Mac-F60DEB81FF30ACF6",
+      "name": "Mac Pro (Late 2013)"
+    },
+    "MacPro7,1": {
+      "board_id": "Mac-27AD2F918AE68F61",
+      "name": "Mac Pro (2019)"
+    },
+    "Macmini1,1": {
+      "board_id": "Mac-F4208EC8",
+      "name": "Mac mini (Early 2006)"
+    },
+    "Macmini2,1": {
+      "board_id": "Mac-F4208EAA",
+      "name": "Mac mini (Mid 2007)"
+    },
+    "Macmini3,1": {
+      "board_id": "Mac-F22C86C8",
+      "name": "Mac mini (Early 2009)"
+    },
+    "Macmini4,1": {
+      "board_id": "Mac-F2208EC8",
+      "name": "Mac mini (Mid 2010)"
+    },
+    "Macmini5,1": {
+      "board_id": "Mac-8ED6AF5B48C039E1",
+      "name": "Mac mini (Mid 2011)"
+    },
+    "Macmini5,2": {
+      "board_id": "Mac-4BC72D62AD45599E",
+      "name": "Mac mini (Mid 2011)"
+    },
+    "Macmini5,3": {
+      "board_id": "Mac-7BA5B2794B2CDB12",
+      "name": "Mac mini Server (Mid 2011)"
+    },
+    "Macmini6,1": {
+      "board_id": "Mac-031AEE4D24BFF0B1",
+      "name": "Mac mini (Late 2012)"
+    },
+    "Macmini6,2": {
+      "board_id": "Mac-F65AE981FFA204ED",
+      "name": "Mac mini Server (Late 2012)"
+    },
+    "Macmini7,1": {
+      "board_id": "Mac-35C5E08120C7EEAF",
+      "name": "Mac mini (Late 2014)"
+    },
+    "Macmini8,1": {
+      "board_id": "Mac-7BA5B2DFE22DDD8C",
+      "name": "Mac mini (2018)"
+    },
+    "Xserve1,1": {
+      "board_id": "Mac-F4208AC8",
+      "name": "Xserve (Late 2006)"
+    },
+    "Xserve2,1": {
+      "board_id": "Mac-F42289C8",
+      "name": "Xserve (Early 2008)"
+    },
+    "Xserve3,1": {
+      "board_id": "Mac-F223BEC8",
+      "name": "Xserve (Early 2009)"
+    },
+    "iMac10,1": {
+      "board_id": "Mac-F221DCC8",
+      "name": "iMac (27-inch, Late 2009)"
+    },
+    "iMac11,1": {
+      "board_id": "Mac-F2268DAE",
+      "name": "iMac (27-inch, Late 2009)"
+    },
+    "iMac11,2": {
+      "board_id": "Mac-F2238AC8",
+      "name": "iMac (21.5-inch, Mid 2010)"
+    },
+    "iMac11,3": {
+      "board_id": "Mac-F2238BAE",
+      "name": "iMac (27-inch, Mid 2010)"
+    },
+    "iMac12,1": {
+      "board_id": "Mac-942B5BF58194151B",
+      "name": "iMac (21.5-inch, Mid 2011)"
+    },
+    "iMac12,2": {
+      "board_id": "Mac-942B59F58194171B",
+      "name": "iMac (27-inch, Mid 2011)"
+    },
+    "iMac13,1": {
+      "board_id": "Mac-00BE6ED71E35EB86",
+      "name": "iMac (21.5-inch, Late 2012)"
+    },
+    "iMac13,2": {
+      "board_id": "Mac-FC02E91DDD3FA6A4",
+      "name": "iMac (27-inch, Late 2012)"
+    },
+    "iMac13,3": {
+      "board_id": "Mac-7DF2A3B5E5D671ED",
+      "name": "iMac (21.5-inch, Early 2013)"
+    },
+    "iMac14,1": {
+      "board_id": "Mac-031B6874CF7F642A",
+      "name": "iMac (21.5-inch, Late 2013)"
+    },
+    "iMac14,2": {
+      "board_id": "Mac-27ADBB7B4CEE8E61",
+      "name": "iMac (27-inch, Late 2013)"
+    },
+    "iMac14,3": {
+      "board_id": "Mac-77EB7D7DAF985301",
+      "name": "iMac (21.5-inch, Late 2013)"
+    },
+    "iMac14,4": {
+      "board_id": "Mac-81E3E92DD6088272",
+      "name": "iMac (21.5-inch, Mid 2014)"
+    },
+    "iMac15,1": {
+      "board_id": "Mac-42FD25EABCABB274",
+      "name": "iMac (Retina 5K, 27-inch, Mid 2015)"
+    },
+    "iMac16,1": {
+      "board_id": "Mac-A369DDC4E67F1C45",
+      "name": "iMac (21.5-inch, Late 2015)"
+    },
+    "iMac16,2": {
+      "board_id": "Mac-FFE5EF870D7BA81A",
+      "name": "iMac (Retina 4K, 21.5-inch, Late 2015)"
+    },
+    "iMac17,1": {
+      "board_id": "Mac-DB15BD556843C820",
+      "name": "iMac (Retina 5K, 27-inch, Late 2015)"
+    },
+    "iMac18,1": {
+      "board_id": "Mac-4B682C642B45593E",
+      "name": "iMac (21.5-inch, 2017)"
+    },
+    "iMac18,2": {
+      "board_id": "Mac-77F17D7DA9285301",
+      "name": "iMac (Retina 4K, 21.5-inch, 2017)"
+    },
+    "iMac18,3": {
+      "board_id": "Mac-BE088AF8C5EB4FA2",
+      "name": "iMac (Retina 5K, 27-inch, 2017)"
+    },
+    "iMac19,1": {
+      "board_id": "Mac-AA95B1DDAB278B95",
+      "name": "iMac (Retina 5K, 27-inch, 2019)"
+    },
+    "iMac19,2": {
+      "board_id": "Mac-63001698E7A34814",
+      "name": "iMac (Retina 4K, 21.5-inch, 2019)"
+    },
+    "iMac20,1": {
+      "board_id": "Mac-CFF7D910A743CAAF",
+      "name": "iMac (Retina 5K, 27-inch, 2020)"
+    },
+    "iMac20,2": {
+      "board_id": "Mac-AF89B6D9451A490B",
+      "name": "iMac (Retina 5K, 27-inch, 2020)"
+    },
+    "iMac4,1": {
+      "board_id": "Mac-F42786C8",
+      "name": "iMac (20-inch, Early 2006)"
+    },
+    "iMac4,2": {
+      "board_id": "Mac-F4218EC8",
+      "name": "iMac (17-inch, Mid 2006)"
+    },
+    "iMac5,1": {
+      "board_id": "Mac-F4228EC8",
+      "name": "iMac (17-inch, Late 2006)"
+    },
+    "iMac5,2": {
+      "board_id": "Mac-F4218EC8",
+      "name": "iMac (17-inch, Late 2006 CD)"
+    },
+    "iMac6,1": {
+      "board_id": "Mac-F4218FC8",
+      "name": "iMac (24-inch, Late 2006)"
+    },
+    "iMac7,1": {
+      "board_id": "Mac-F42386C8",
+      "name": "iMac (20-inch, Mid 2007)"
+    },
+    "iMac8,1": {
+      "board_id": "Mac-F227BEC8",
+      "name": "iMac (20-inch, Early 2008)"
+    },
+    "iMac9,1": {
+      "board_id": "Mac-F2218FA9",
+      "name": "iMac (20-inch, Mid 2009)"
+    },
+    "iMacPro1,1": {
+      "board_id": "Mac-7BA5B2D9E42DDD94",
+      "name": "iMac Pro (2017)"
+    }
+  }
+}

@@ -98,8 +98,12 @@ class RescueTests(unittest.TestCase):
     def run_main(self, *extra):
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
-            code = rescue.main(["--usb", str(self.usb), "--oclp-tag", "3.0.0-rc.5",
-                                "--cache", str(self.cache), *extra])
+            args = ["--usb", str(self.usb), "--oclp-tag", "3.0.0-rc.5", "--cache", str(self.cache), *extra]
+            if "--no-yes" in args:
+                args.remove("--no-yes")
+            elif "--check" not in args:
+                args.append("--yes")
+            code = rescue.main(args)
         return code, out.getvalue()
 
     def packages(self):
@@ -122,12 +126,12 @@ class RescueTests(unittest.TestCase):
         code, out = self.run_main()
         self.assertEqual(code, 0)
         self.assertEqual(self.downloads, [])
-        self.assertIn("Nothing to do", out)
+        self.assertIn("PASS: nothing is missing", out)
 
     def test_check_reports_without_writing(self):
         code, out = self.run_main("--check")
         self.assertEqual(code, 1)
-        self.assertIn("AutoPkg-Assets.pkg: MISSING", out)
+        self.assertIn("MISSING -> download from OCLP 3.0.0-rc.5", out)
         self.assertFalse(self.packages().exists())
         self.assertEqual(self.downloads, [])
 
@@ -263,7 +267,7 @@ class RescueTests(unittest.TestCase):
         self.write_config(product="MacBookPro11,3", board="Mac-2BD1B31983FE1663", update=True)
         code, out = self.run_main()
         self.assertEqual(code, 0)
-        self.assertIn("DataHub: OK", out)
+        self.assertIn("OK (MacBookPro11,3, Mac-2BD1B31983FE1663)", out)
         self.assertEqual(list((self.efi / "EFI/OC").glob("config.before-*")), [])
 
     def test_spoofed_build_is_left_alone(self):
@@ -296,7 +300,7 @@ class RescueTests(unittest.TestCase):
         self.run_main("--packages-only")
         code, out = self.run_main("--check")
         self.assertEqual(code, 1)
-        self.assertIn("DataHub: MISSING", out)
+        self.assertIn("MISSING SystemProductName, BoardProduct, UpdateDataHub", out)
         self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["SystemProductName"], "")
 
     def test_packages_only_skips_efi(self):
@@ -310,6 +314,47 @@ class RescueTests(unittest.TestCase):
         self.assertGreater(len(ids), 100)
         self.assertEqual(ids["MacBookPro11,3"], "Mac-2BD1B31983FE1663")
         self.assertTrue(all(v.startswith("Mac-") for v in ids.values()))
+
+    def test_report_names_the_mac_this_usb_is_for(self):
+        code, out = self.run_main("--check")
+        self.assertIn("OpenCore built for:  MacBook Pro (Retina, 15-inch, Late 2013) (MacBookPro11,3)", out)
+        self.assertIn("macOS installer:     Tahoe 26.7.2 (25G332)", out)
+        self.assertIn("Verbose boot:        off", out)
+
+    def test_answering_no_changes_nothing(self):
+        with patch.object(rescue.sys.stdin, "isatty", lambda: True), patch("builtins.input", lambda prompt: "n"):
+            code, out = self.run_main("--no-yes")
+        self.assertEqual(code, 1)
+        self.assertIn("No changes made", out)
+        self.assertFalse(self.packages().exists())
+        self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["SystemProductName"], "")
+        self.assertEqual(self.downloads, [])
+
+    def test_answering_yes_makes_the_changes(self):
+        prompts = []
+        def answer(prompt):
+            prompts.append(prompt)
+            return "y"
+        with patch.object(rescue.sys.stdin, "isatty", lambda: True), patch("builtins.input", answer):
+            code, out = self.run_main("--no-yes")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(len(prompts), 1)
+        self.assertIn("MacBook Pro (Retina, 15-inch, Late 2013) (MacBookPro11,3)", out)
+        self.assertEqual(self.config()["PlatformInfo"]["DataHub"]["SystemProductName"], "MacBookPro11,3")
+
+    def test_without_terminal_or_yes_it_refuses_to_change_anything(self):
+        with patch.object(rescue.sys.stdin, "isatty", lambda: False):
+            code, out = self.run_main("--no-yes")
+        self.assertEqual(code, 2)
+        self.assertIn("--yes", out)
+        self.assertFalse(self.packages().exists())
+
+    def test_nothing_missing_asks_nothing(self):
+        self.run_main()
+        with patch.object(rescue.sys.stdin, "isatty", lambda: True), patch("builtins.input", lambda prompt: self.fail("asked")):
+            code, out = self.run_main("--no-yes")
+        self.assertEqual(code, 0)
+        self.assertIn("PASS: nothing is missing", out)
 
     def test_tag_is_read_from_installed_app(self):
         app = Path(self.tmp.name) / "OpenCore-Patcher.app"

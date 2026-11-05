@@ -19,7 +19,36 @@ cd oclp-tahoe-autopatch-rescue
 python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"
 ```
 
-**The right order:** in OCLP, set **Settings → Target Model** to the Mac you'll install on, run **Create macOS Installer**, then **Build and Install OpenCore** onto the USB. *Then* run Autopatch Rescue on the same Mac, before you eject. It needs Python 3.9+, internet access and about 2.2 GB free on the USB. It reads the installer's macOS build and your installed OCLP release (for example `3.0.0-rc.5`). It skips files that are already correct, never edits a package (anything that doesn't match is deleted and downloaded again), and stops on anything it can't verify. Add `--check` to report without changing anything.
+**The right order:** in OCLP, set **Settings → Target Model** to the Mac you'll install on, run **Create macOS Installer**, then **Build and Install OpenCore** onto the USB. *Then* run Autopatch Rescue on the same Mac, before you eject. It needs Python 3.9+, internet access and about 2.2 GB free on the USB.
+
+### What the script does
+
+1. **Asks for your Mac password**, which it needs to open the USB's EFI partition.
+2. **Reads the USB and shows what it's for:** the macOS installer version, the OCLP release, and the Mac OpenCore was built for (by its name and model identifier). It also says whether Verbose boot is on.
+3. **Checks three things** and shows each as OK or MISSING: `AutoPkg-Assets.pkg`, `KDK.pkg` and the DataHub values.
+4. If something is missing, it **asks you to confirm** that this is the Mac you're installing on before changing anything. Answer `n` and nothing is touched. (`--yes` skips the question; `--check` only reports.)
+5. **Fixes only what's missing:** it downloads the packages (checked against GitHub's published SHA-256 digests; the `KDK.pkg` must be Apple-signed) and writes the DataHub values (below). A package that doesn't match is deleted and downloaded again, never edited.
+6. Checks again and ends with **`PASS: the USB is ready.`**
+
+It leaves everything else OCLP built untouched, including OpenCore's kexts, patches and settings. Nothing is installed on the Mac you run it on.
+
+Example: a USB made by an OCLP release candidate, before the fix (the Mac shown is just an example):
+
+```text
+This USB
+  macOS installer:     Tahoe 26.7.2 (25G332)
+  OCLP release:        3.0.0-rc.5
+  OpenCore built for:  iMac (Retina 4K, 21.5-inch, 2017) (iMac18,2)
+  Verbose boot:        on
+
+Checks
+  AutoPkg-Assets.pkg   MISSING -> download from OCLP 3.0.0-rc.5
+  KDK.pkg              MISSING -> add Apple KDK for 25G332
+  DataHub              MISSING SystemProductName, BoardProduct, UpdateDataHub -> set iMac18,2, Mac-77F17D7DA9285301, UpdateDataHub on
+
+This USB is set up for: iMac (Retina 4K, 21.5-inch, 2017) (iMac18,2)
+Is that the Mac you're installing on, and should the changes above be made? [y/N]
+```
 
 ### When DataHub is written
 
@@ -30,12 +59,12 @@ Every time it runs, the script reads the OpenCore config on the USB's EFI (`EFI/
 | No OpenCore, or a config OCLP didn't build | **Stops.** Run *Build and Install OpenCore* in OCLP first. |
 | OCLP built it **spoofed** as another model | **Leaves it alone.** OCLP already set DataHub for the spoofed model. |
 | Model, board ID and `UpdateDataHub` already set correctly | **Changes nothing** (`DataHub: OK`). |
-| Model or board ID **empty**, or `UpdateDataHub` off | **Writes only what's missing:** the model OCLP built for, that model's board ID from OCLP's own model table, and `UpdateDataHub = true`. The config is backed up first. |
+| Model or board ID **empty**, or `UpdateDataHub` off | **Writes only what's missing:** the model OCLP built for, that model's board ID from OCLP's own model table ([`oclp_models.json`](oclp_models.json)), and `UpdateDataHub = true`. The config is backed up first. |
 | A **different** value is already there | **Stops without overwriting**, so you can check it. |
 
 **Why it can be missing:** OCLP fills in the DataHub board ID itself to prevent this boot loop, but only on Ivy Bridge and older Macs (roughly 2012 and earlier), or when you build with SMBIOS spoofing. A newer Mac built as itself gets both values empty. The script fills in the Mac's own real values, never a different model, so it's safe on Macs that would have booted without them.
 
-It only writes to the USB (its EFI and `Library/Packages`). Opening the EFI is why it asks for your Mac password; use `--packages-only` to skip this step. If you rebuild OpenCore in OCLP later, run it again.
+If you rebuild OpenCore in OCLP later, run the script again. Use `--packages-only` to skip the DataHub step.
 
 **Why this happens, with logs and source references:** [docs/OCLP-RC-ASSETS-BUG.md](docs/OCLP-RC-ASSETS-BUG.md). In short, OCLP looks for a GitHub release named `3.0.0` that doesn't exist during the RC phase. Its fallback saves a nightly.link 404 page as the package, and the step that copies the package and the KDK then quits silently.
 

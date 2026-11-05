@@ -18,12 +18,16 @@ the SHA-256 digest GitHub publishes for it. Correct files already present are
 kept. A package that does not match is deleted and downloaded again, never
 edited. Nothing is installed on this Mac and no disk is erased.
 
-It then checks the OpenCore that OCLP installed on the USB's EFI partition.
+It also checks the OpenCore that OCLP installed on the USB's EFI partition.
 When OCLP built it for the Mac's own model (no SMBIOS spoof) and left the
 DataHub model and board ID empty, it fills in that model's real values from
-OCLP's own model table. Empty values caused "Lilu: failed to obtain model
-information" boot loops on a MacBookPro11,3. The config is backed up first,
-and values that are already set are never overwritten.
+OCLP's own model table. OCLP does this itself only for Ivy Bridge and older
+Macs; without it a newer Mac can loop at boot on "failed to obtain model
+information". The config is backed up first, and values that are already set
+are never overwritten.
+
+It shows what the USB is for and what's missing, and asks before changing
+anything.
 
   python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"           # fix (asks for your password)
   python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe" --check   # report only
@@ -51,7 +55,8 @@ OCLP_APP = Path("/Library/Application Support/Dortania/OpenCore-Patcher.app")
 HOME = Path(os.path.expanduser("~" + os.environ.get("SUDO_USER", "")))
 CACHE = HOME / "Library/Caches/autopatch-rescue"
 OCLP_GUID = "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102"
-BOARD_IDS_FILE = Path(__file__).resolve().with_name("oclp_board_ids.json")
+MODELS_FILE = Path(__file__).resolve().with_name("oclp_models.json")
+APPLE_GUID = "7C436110-AB2A-4BBB-A880-FE41995C9F82"
 ASSETS = "AutoPkg-Assets.pkg"
 KDK = "KDK.pkg"
 STATE = ".autopatch-rescue.json"
@@ -245,8 +250,6 @@ def plan(usb, oclp_tag, kdk_build):
     """Work out what the USB should contain. Network: GitHub API only."""
     version, build = read_installer(usb)
     kdk_build = kdk_build or build
-    say(f"Installer: macOS {version} ({build})")
-    say(f"OCLP release: {oclp_tag}")
 
     rel = release(OCLP_REPO, oclp_tag)
     if rel is None:
@@ -335,8 +338,15 @@ def fix(usb, want, cache):
 
 # ------------------------------------------------- OpenCore DataHub on the EFI
 
+MACOS_NAMES = {"11": "Big Sur", "12": "Monterey", "13": "Ventura", "14": "Sonoma", "15": "Sequoia", "26": "Tahoe"}
+
+
+def models():
+    return json.loads(MODELS_FILE.read_text())["models"]
+
+
 def board_ids():
-    return json.loads(BOARD_IDS_FILE.read_text())["board_ids"]
+    return {model: info["board_id"] for model, info in models().items()}
 
 
 def efi_partition(usb):
@@ -371,7 +381,7 @@ def efi_mounted(device):
 
 
 def datahub_status(config):
-    """Return (status, model, board): status is ok, missing or spoofed."""
+    """Describe the OpenCore config: status is ok, missing or spoofed."""
     model = config.get("NVRAM", {}).get("Add", {}).get(OCLP_GUID, {}).get("OCLP-Model")
     if not model:
         raise FixError("The USB's OpenCore was not built by OCLP (no OCLP-Model). "
@@ -382,20 +392,27 @@ def datahub_status(config):
     platform = config.get("PlatformInfo")
     if not isinstance(platform, dict) or not isinstance(platform.get("DataHub"), dict):
         raise FixError("OpenCore config has no PlatformInfo/DataHub section. Rebuild it in OCLP.")
+    info = models().get(model, {})
+    boot_args = config.get("NVRAM", {}).get("Add", {}).get(APPLE_GUID, {}).get("boot-args", "")
+    result = {"model": model, "name": info.get("name", model), "board": info.get("board_id"),
+              "verbose": "-v" in str(boot_args).split(), "spoof": None, "missing": []}
     generic = platform.get("Generic", {}).get("SystemProductName", "")
     if platform.get("UpdateSMBIOS") or (generic and generic != model):
-        return "spoofed", model, None  # OCLP is presenting another model; leave its identity alone
-    board = board_ids().get(model)
-    if not board:
+        result.update(status="spoofed", spoof=generic or "another model")  # OCLP set it on purpose
+        return result
+    if not result["board"]:
         raise FixError(f"OCLP's model table has no board ID for {model}.")
     datahub = platform["DataHub"]
-    for key, want in (("SystemProductName", model), ("BoardProduct", board)):
+    for key, want in (("SystemProductName", model), ("BoardProduct", result["board"])):
         if datahub.get(key) not in ("", None, want):
             raise FixError(f"DataHub {key} is {datahub.get(key)!r}, expected {want!r} for {model}. "
                            "It was set by someone else; review it rather than overwrite.")
-    ok = (datahub.get("SystemProductName") == model and datahub.get("BoardProduct") == board
-          and platform.get("UpdateDataHub") is True)
-    return ("ok" if ok else "missing"), model, board
+        if datahub.get(key) != want:
+            result["missing"].append(key)
+    if platform.get("UpdateDataHub") is not True:
+        result["missing"].append("UpdateDataHub")
+    result["status"] = "missing" if result["missing"] else "ok"
+    return result
 
 
 def set_datahub(path, model, board):
@@ -423,34 +440,79 @@ def set_datahub(path, model, board):
     return backup
 
 
-def efi_step(usb, check):
-    """Check (and unless check, fix) the DataHub model and board ID. Returns True when OK."""
+def efi_config(mount):
+    path = mount / "EFI/OC/config.plist"
+    if not path.is_file():
+        raise FixError("The USB's EFI has no OpenCore yet. In OCLP, set the Target Model, "
+                       "then Build and Install OpenCore onto this USB.")
+    return path
+
+
+def efi_read(usb):
     with efi_mounted(efi_partition(usb)) as mount:
-        path = mount / "EFI/OC/config.plist"
-        if not path.is_file():
-            raise FixError("The USB's EFI has no OpenCore yet. In OCLP, set the Target Model, "
-                           "then Build and Install OpenCore onto this USB.")
-        status, model, board = datahub_status(plistlib.loads(path.read_bytes()))
-        say(f"OpenCore on the USB is built for: {model}")
-        if status == "spoofed":
-            say("DataHub: left alone (OCLP is presenting a different model on purpose)")
-            return True
-        if status == "ok":
-            say(f"DataHub: OK ({model}, {board})")
-            return True
-        say(f"DataHub: MISSING model/board ID (should be {model}, {board})")
-        if check:
-            return False
-        backup = set_datahub(path, model, board)
-        say(f"  set DataHub SystemProductName={model}, BoardProduct={board}, UpdateDataHub=true")
-        say(f"  original config saved as {backup.name}")
-        return datahub_status(plistlib.loads(path.read_bytes()))[0] == "ok"
+        return datahub_status(plistlib.loads(efi_config(mount).read_bytes()))
+
+
+def efi_fix(usb):
+    """Write the missing DataHub values. Returns the status afterwards."""
+    with efi_mounted(efi_partition(usb)) as mount:
+        path = efi_config(mount)
+        status = datahub_status(plistlib.loads(path.read_bytes()))
+        if status["status"] != "missing":
+            return status
+        backup = set_datahub(path, status["model"], status["board"])
+        say(f"  DataHub set: SystemProductName={status['model']}, BoardProduct={status['board']}, UpdateDataHub=true")
+        say(f"  original config saved on the USB's EFI as EFI/OC/{backup.name}")
+        return datahub_status(plistlib.loads(path.read_bytes()))
+
+
+# ----------------------------------------------------------------- the report
+
+def report(want, assets_ok, kdk_ok, efi):
+    """Show what this USB will install and what is missing. Returns True if anything needs fixing."""
+    version = want["macos_version"]
+    say("")
+    say("This USB")
+    say(f"  macOS installer:     {MACOS_NAMES.get(version.split('.')[0], 'macOS')} {version} ({want['macos_build']})")
+    say(f"  OCLP release:        {want['oclp_tag']}")
+    if efi:
+        say(f"  OpenCore built for:  {efi['name']} ({efi['model']})")
+        say(f"  Verbose boot:        {'on' if efi['verbose'] else 'off (turn on in OCLP settings to see boot messages)'}")
+    say("")
+    say("Checks")
+    say(f"  {ASSETS:<20} {'OK' if assets_ok else 'MISSING -> download from OCLP ' + want['oclp_tag']}")
+    say(f"  {KDK:<20} {'OK' if kdk_ok else 'MISSING -> add Apple KDK for ' + want['kdk_build']}")
+    if efi:
+        if efi["status"] == "spoofed":
+            say(f"  {'DataHub':<20} left alone (OCLP built it spoofed as {efi['spoof']})")
+        elif efi["status"] == "ok":
+            say(f"  {'DataHub':<20} OK ({efi['model']}, {efi['board']})")
+        else:
+            say(f"  {'DataHub':<20} MISSING {', '.join(efi['missing'])} -> set {efi['model']}, {efi['board']}, UpdateDataHub on")
+    say("")
+    return not (assets_ok and kdk_ok and (efi is None or efi["status"] != "missing"))
+
+
+def confirm(efi, assume_yes):
+    """Ask before changing anything: the USB must be for the Mac being installed."""
+    if assume_yes:
+        return True
+    if not sys.stdin.isatty():
+        raise FixError("Run this in Terminal so it can ask you to confirm, or add --yes.")
+    target = f"{efi['name']} ({efi['model']})" if efi else "the Mac you chose in OCLP"
+    say(f"This USB is set up for: {target}")
+    try:
+        answer = input("Is that the Mac you're installing on, and should the changes above be made? [y/N] ")
+    except EOFError:
+        answer = ""
+    return answer.strip().lower() in ("y", "yes")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--usb", required=True, type=Path, help='Installer volume, e.g. "/Volumes/Install macOS Tahoe"')
     parser.add_argument("--check", action="store_true", help="Report only; change nothing")
+    parser.add_argument("--yes", action="store_true", help="Don't ask for confirmation before making changes")
     parser.add_argument("--oclp-tag", help="OCLP release tag (default: read from the installed OCLP app)")
     parser.add_argument("--kdk-build", help="KDK build to use when no exact match exists (default: the installer's build)")
     parser.add_argument("--cache", type=Path, default=CACHE, help=f"Download cache (default: {CACHE})")
@@ -462,24 +524,30 @@ def main(argv=None):
         os.execv("/usr/bin/sudo", ["sudo", sys.executable, str(Path(__file__).resolve())] + sys.argv[1:])
     try:
         want = plan(args.usb, args.oclp_tag or installed_oclp_tag(), args.kdk_build)
-        if args.check:
-            assets_ok, kdk_ok, _ = inspect(args.usb, want)
-            say(f"{ASSETS}: {'OK' if assets_ok else 'MISSING or wrong'}")
-            say(f"{KDK}: {'OK' if kdk_ok else 'MISSING or unverified'}")
-            efi_ok = True if args.packages_only else efi_step(args.usb, check=True)
-            if assets_ok and kdk_ok and efi_ok:
-                say("PASS: the USB has everything OCLP should have set up.")
-                return 0
-            say("Run again without --check to fix it.")
-            return 1
-        fix(args.usb, want, args.cache)
         assets_ok, kdk_ok, _ = inspect(args.usb, want)
+        efi = None if args.packages_only else efi_read(args.usb)
+        needs_work = report(want, assets_ok, kdk_ok, efi)
+
+        if not needs_work:
+            say("PASS: nothing is missing. The USB is ready.")
+            return 0
+        if args.check:
+            say("Something is missing. Run again without --check to fix it.")
+            return 1
+        if not confirm(efi, args.yes):
+            say("No changes made.")
+            return 1
+
         if not (assets_ok and kdk_ok):
-            raise FixError("Final check failed; the USB is still incomplete.")
-        say("Packages: AutoPkg-Assets.pkg and KDK.pkg are on the USB and verified.")
-        if not args.packages_only and not efi_step(args.usb, check=False):
-            raise FixError("OpenCore DataHub check failed after the update.")
-        say("PASS: the USB is ready. Eject it and boot the target Mac from EFI Boot.")
+            fix(args.usb, want, args.cache)
+            assets_ok, kdk_ok, _ = inspect(args.usb, want)
+            if not (assets_ok and kdk_ok):
+                raise FixError("Final check failed; the packages are still incomplete.")
+            say("Packages: AutoPkg-Assets.pkg and KDK.pkg are on the USB and verified.")
+        if efi and efi["status"] == "missing":
+            if efi_fix(args.usb)["status"] != "ok":
+                raise FixError("OpenCore DataHub check failed after the update.")
+        say("PASS: the USB is ready. Eject it and boot the target Mac from the USB's EFI Boot.")
         return 0
     except FixError as error:
         say("STOP:", error)
