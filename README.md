@@ -1,120 +1,103 @@
-# OCLP Tahoe USB Preparation for MacBookPro11,3
+# OCLP Tahoe Autopatch Rescue
 
-![Model: MacBookPro11,3](https://img.shields.io/badge/model-MacBookPro11%2C3-2563eb)
-![macOS: 26.7.1](https://img.shields.io/badge/macOS-26.7.1%20%2825G241%29-111827)
-![OCLP: RC3](https://img.shields.io/badge/OCLP-3.0.0--rc.3-f59e0b)
+![OCLP: 3.0.0 RC](https://img.shields.io/badge/OCLP-3.0.0--rc.5-f59e0b)
+![macOS: Tahoe 26](https://img.shields.io/badge/macOS-Tahoe%2026-111827)
+![Any OCLP Mac](https://img.shields.io/badge/model-any%20OCLP%20Mac-2563eb)
 
-**A four-step guide: create the USB, prepare it, install Tahoe, then set up booting without the USB.**
+**If you've landed here, OCLP's normal process didn't work for you.** You made a Tahoe installer USB with an OCLP 3.0.0 release candidate, installed macOS from it, and either the Mac got stuck in a boot loop or nothing was patched afterwards (no Wi-Fi, graphics acceleration or audio).
 
-For the **mid-2014 15-inch MacBook Pro (MacBookPro11,3)** with Intel Iris Pro and NVIDIA GT 750M. Supports **Tahoe 26.7.1 / build 25G241 and OCLP 3.0.0 RC3 only**. The preparation tool stops for a different target model or installer build.
+Autopatch Rescue fixes the **USB installer**. You then use the fixed USB to install Tahoe onto a clean, formatted drive.
 
-> [!IMPORTANT]
-> **Step 4 is required to boot without the USB in this workflow.**
-> Install OpenCore onto the internal drive, then run the finishing tool **on the MacBook before rebooting**. Preparing the USB alone leaves this setup dependent on USB OpenCore.
->
-> **Already have a working Tahoe desktop through the USB? Start at [step 4](#4-finish-opencore-on-the-internal-drive). Keep your installed system; you do not need to erase it again for this step.**
+## What it fixes
 
-## Process overview
+- **Missing `AutoPkg-Assets.pkg` and `KDK.pkg`.** OCLP is meant to put these on the USB, so that after macOS installs, OCLP installs itself and root patches automatically. A bug in every 3.0.0 release candidate leaves them off and still reports success. [Why this happens](docs/OCLP-RC-ASSETS-BUG.md).
+- **Missing OpenCore DataHub model and board ID.** Without them, a Mac can loop at boot on "failed to obtain model information". OCLP only fills these in for some Macs ([details below](#when-datahub-is-written)).
 
-| Step | Where | What you do | Ready to continue when… |
-| :--- | :--- | :--- | :--- |
-| **[1. Create the USB](#1-create-the-oclp-usb)** | Working Mac | Use OCLP RC3 to create the installer and install USB OpenCore for 11,3. | The USB contains the Tahoe installer and OpenCore. |
-| **[2. Prepare the USB](#2-prepare-the-usb)** | Working Mac | Run this repo’s preparation command. | It prints **PASS**; packages, EFI fixes and the finishing tool are ready. |
-| **[3. Install Tahoe](#3-install-tahoe-on-the-macbook)** | MacBook Pro | Boot through USB EFI, install Tahoe and complete setup/root patching. | The desktop works while booted through USB OpenCore. |
-| **[4. Finish internal OpenCore](#4-finish-opencore-on-the-internal-drive)** | **MacBook Pro** | Install internal OpenCore, then run the finishing tool from the USB. | The desktop works after a restart **with the USB disconnected**. |
-
-**Reported working result:** on 17 October 2026, the owner confirmed completed setup and booting without the USB after the internal finishing step. This is one MacBookPro11,3 result. The newer USB launcher/automatic tools installation has fixture coverage and still needs a fresh hardware test. [Validation details](docs/TESTING.md).
+Everything else OCLP built is left exactly as it is.
 
 ## Before you start
 
-- A working Mac: the MacBook itself or another Mac, such as an iMac.
-- **Git and Python 3.9+ on the preparation Mac**, Internet access for missing official packages, and approximately **8 GiB free host storage**. Extra space may be needed for backups.
-- An installer USB with enough space; **32 GB** was used for this workflow.
-- OCLP **3.0.0 RC3** and the exact Tahoe installer/build above.
+- **Plan a clean install.** Back up the target Mac. You'll erase its drive during the install.
+- On the Mac you're preparing the USB on, in OCLP:
+  1. Set **Settings → Target Model** to the Mac you'll install on.
+  2. Turn on **Verbose** in the build settings (off by default), so a boot loop shows on screen.
+  3. Run **Create macOS Installer** and write Tahoe to the USB.
+  4. Run **Build and Install OpenCore** onto the USB.
+- You need Python 3.9+, internet access, and about 2.2 GB free on the USB.
 
-If Git/Python requests developer tools on the preparation Mac, run `xcode-select --install`, finish the installation window, then check `git --version` and `python3 --version`. A compiler is unnecessary for normal preparation when Python already works. The MacBook’s USB finishing launcher handles its own missing-tools setup in step 4.
+## Fix the USB
 
-## 1. Create the OCLP USB
-
-**On the working Mac, in OCLP RC3:**
-
-1. Set **Settings → Target Model → MacBookPro11,3**. Keep the other model defaults; Verbose Mode is optional.
-2. Choose **Create macOS Installer** and write **Tahoe 26.7.1 / 25G241** to the USB. This erases the USB.
-3. Choose **Build and Install OpenCore**, build it, then install onto **the USB’s EFI partition**.
-
-Already created the installer? Select the correct target before building/installing USB OpenCore, then continue to step 2.
-
-## 2. Prepare the USB
-
-**On the working Mac, open Terminal:**
+With the USB still plugged in:
 
 ```bash
-git clone https://github.com/MrCee/oclp-tahoe-mbp113-usb-preparation.git
-cd oclp-tahoe-mbp113-usb-preparation
-sudo python3 prepare_usb.py --usb "/Volumes/Install macOS Tahoe"
+git clone https://github.com/MrCee/oclp-tahoe-autopatch-rescue.git
+cd oclp-tahoe-autopatch-rescue
+python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"
 ```
 
-Already cloned this repo? Run `git pull --ff-only` inside its folder, then run the preparation command above. Replace the USB name if yours differs.
+What happens:
 
-The command supplies the verified **RC3 assets and matching KDK packages**, applies the USB’s model/normal-boot fixes, and includes **`MBP113-Finish/finish-install.command`** for step 4. It saves backups and logs and shows download/copy progress. Valid existing packages are reused.
+1. It **asks for your Mac password**, which it needs to open the USB's EFI partition.
+2. It **shows what the USB is for:** the macOS version, the OCLP release, and the Mac OpenCore was built for, by name and model identifier.
+3. It **checks** `AutoPkg-Assets.pkg`, `KDK.pkg` and the DataHub values, and shows each as OK or MISSING.
+4. If something is missing, it **asks you to confirm** that this is the Mac you're installing on. Answer `n` and nothing is changed.
+5. It **fixes only what's missing**, then checks again and ends with `PASS`.
 
-> [!IMPORTANT]
-> **Wait for `PASS: supported USB preparation and report saving complete.`**
-> If preparation stops, resolve the reported error and rerun. Rebuilding USB OpenCore can replace the fixes, so run preparation **after** the OCLP build/install.
+For example, on a USB straight from an OCLP release candidate (the Mac shown is just an example):
 
-Once it passes, safely eject the USB and its EFI volume. Package installation on the preparation Mac is unnecessary; the packages are staged for the Tahoe installer. [What the scripts change](docs/REFERENCE.md#what-the-scripts-change).
+```text
+This USB
+  macOS installer:     Tahoe 26.7.2 (25G332)
+  OCLP release:        3.0.0-rc.5
+  OpenCore built for:  iMac (Retina 4K, 21.5-inch, 2017) (iMac18,2)
+  Verbose boot:        on
 
-## 3. Install Tahoe on the MacBook
+Checks
+  AutoPkg-Assets.pkg   MISSING -> download from OCLP 3.0.0-rc.5
+  KDK.pkg              MISSING -> add Apple KDK for 25G332
+  DataHub              MISSING SystemProductName, BoardProduct, UpdateDataHub -> set iMac18,2, Mac-77F17D7DA9285301, UpdateDataHub on
 
-**On the MacBook Pro, with the prepared USB and charger connected:**
-
-1. Start holding **Option**. Choose **USB EFI Boot**, then **Install macOS Tahoe**.
-2. For the reported clean-install route, use Disk Utility to erase the intended **internal macOS target** as **APFS** (and **GUID Partition Map** if erasing the physical drive). **Erasing deletes its contents—back up first.** Keep the prepared USB intact. Quit Disk Utility and install Tahoe onto the internal target.
-3. At each restart, boot through **USB EFI Boot**. Select the continuing **macOS Installer** entry while installation is underway, then **Macintosh HD** (or your internal volume’s name) when installation finishes. Avoid starting a new installation from the USB each time.
-4. Complete user setup. In OCLP, check **Post-Install Root Patch**, apply required patches it reports, and reboot through USB EFI if needed.
-
-**Checkpoint:** you have a usable Tahoe desktop through the USB. **Continue to step 4 before removing it.**
-
-## 4. Finish OpenCore on the internal drive
-
-**Required final step: boot without the USB.** Start in the MacBook’s installed Tahoe desktop, booted through the working USB EFI.
-
-1. In **OCLP RC3**, confirm **Target Model → MacBookPro11,3**, choose **Build and Install OpenCore**, then install to the **internal physical drive containing Tahoe → its EFI partition**. Identify the drive by name, capacity and internal status; do not assume a disk number.
-2. **Postpone OCLP’s reboot prompt.** Open **`MBP113-Finish` on the USB** and double-click **`finish-install.command`**. Alternatively, run:
-
-   ```bash
-   /bin/bash "/Volumes/Install macOS Tahoe/MBP113-Finish/finish-install.command"
-   ```
-
-   Replace the USB name if needed and enter the MacBook administrator password when asked. Keep the USB connected and writable until the helper finishes.
-3. Require **`PASS: internal EFI configuration verified`**. Then shut down, disconnect the USB, start holding **Option**, and select **internal EFI Boot → Macintosh HD**.
-4. Once that works, hold **Control** while selecting the internal EFI entry in Apple’s Option picker to make it the default. Test an ordinary restart **with the USB still disconnected**.
-
-**Success:** the desktop loads without the USB. Keep the USB as a fallback.
-
-The finishing tool runs when you open it; normal preparation installs no USB-mount or login watcher. It reuses **Python 3.9+** when available. If Python is missing, it discovers and installs Apple’s offered stable **Command Line Tools** package automatically, then checks Python again. **No Git or second clone is needed on the MacBook.** Setup and EFI backup/report files stay on the USB. [Tools setup, exact EFI changes and logs](docs/REFERENCE.md).
-
-> [!IMPORTANT]
-> **Repeat the finishing step after rebuilding internal OpenCore.**
-> A fresh OCLP build can replace the model fixes that enabled booting. Post-install root patching and internal OpenCore installation are separate operations.
-
-**If boot fails:** reconnect the USB and boot **USB EFI Boot → Macintosh HD**. Keep the error and logs, then check the [troubleshooting reference](docs/REFERENCE.md#if-something-stops). Keep the installed OS while resolving the boot configuration.
-
-## Checks and logs
-
-Audit a prepared USB without changing its files or permissions:
-
-```bash
-sudo python3 prepare_usb.py --usb "/Volumes/Install macOS Tahoe" --check
+This USB is set up for: iMac (Retina 4K, 21.5-inch, 2017) (iMac18,2)
+Is that the Mac you're installing on, and should the changes above be made? [y/N]
 ```
 
-An unmounted EFI may be mounted read-only. See the [reference](docs/REFERENCE.md) for log locations, backups, manual packages, existing clones and older USBs.
+Options: `--check` reports without changing anything, `--yes` skips the question, and `--packages-only` skips the DataHub step. If you rebuild OpenCore in OCLP later, run the script again.
+
+**How the packages are handled:** the assets package comes from the OCLP release you have installed, and the KDK from Dortania's KdkSupportPkg for your installer's macOS build. Both downloads are checked against the SHA-256 digests GitHub publishes, and the `KDK.pkg` taken from the KDK disk image must be Apple-signed. A package already on the USB that doesn't match is deleted and downloaded again, never edited. Nothing is installed on the Mac you run the script on.
+
+### When DataHub is written
+
+The script reads the OpenCore config on the USB's EFI (`EFI/OC/config.plist`) every time it runs:
+
+| What it finds | What it does |
+| :--- | :--- |
+| No OpenCore, or a config OCLP didn't build | **Stops.** Run *Build and Install OpenCore* in OCLP first. |
+| OCLP built it **spoofed** as another model | **Leaves it alone.** OCLP has already set DataHub for that model. |
+| Model, board ID and `UpdateDataHub` already set correctly | **Changes nothing.** |
+| Model or board ID **empty**, or `UpdateDataHub` off | **Writes only what's missing:** the model OCLP built for, that model's board ID from OCLP's own model table ([`oclp_models.json`](oclp_models.json)), and `UpdateDataHub = true`. It backs up the config first. |
+| A **different** value is already there | **Stops without overwriting**, so you can check it. |
+
+**Why it can be missing:** OCLP fills in the DataHub board ID itself to prevent this boot loop, but only on Ivy Bridge and older Macs (roughly 2012 and earlier), or when you build with SMBIOS spoofing. A newer Mac built as itself gets both values empty. The script only ever writes the Mac's own real values, so it's safe on Macs that would have booted without them.
+
+## Install on the target Mac
+
+1. Plug the fixed USB into the Mac you built it for. Hold **Option** at power-on and choose the USB's **EFI Boot**, then **Install macOS Tahoe**.
+2. **Erase the drive:** open **Disk Utility** from the installer, erase the target drive (APFS; choose GUID Partition Map if you erase the whole disk), then quit Disk Utility and install Tahoe onto it.
+3. At **every restart**, hold Option and choose the USB's **EFI Boot** again: the **macOS Installer** entry while installing, then **Macintosh HD** once it's finished.
+4. Near the end, the installer runs the two packages: OCLP installs itself, root patches, and restarts once more. Afterwards, OCLP's *Post-Install Root Patch* screen should show today's date.
+
+## Troubleshooting
+
+| Situation | What to do |
+| :--- | :--- |
+| `Library/Packages` on the USB is missing or empty | Run the script. |
+| Boot loop on "failed to obtain model information" | Run the script on the USB, then do a clean install from it. |
+| You use a final (non-RC) OCLP release | The package download works on final releases. Run `--check` to see whether anything else is missing. |
+| The final 3.0.0 has been published | Update OCLP first. An RC app would then download the final release's assets, which don't match it. |
 
 ## Further information
 
-- [Technical reference and troubleshooting](docs/REFERENCE.md) — exact settings, tools setup, logs and advanced options.
-- [Validation and limits](docs/TESTING.md) — owner-reported result, automated checks and remaining tests.
-- [Troubleshooting history](docs/CASE-STUDY.md) — the observations behind this workflow.
-- [Experimental Recovery fallback](docs/RECOVERY.md) — optional; outside the normal route above.
+- [Why OCLP RC USBs miss AutoPkg-Assets.pkg and KDK.pkg](docs/OCLP-RC-ASSETS-BUG.md): logs, source references and the fix.
+- [Testing](docs/TESTING.md): hardware results, the DataHub control test and the automated checks.
 
-This is an unofficial, model-specific preparation workflow. **OCLP and its contributors provide the actual patches and boot support.** This repo provides surrounding preparation code and documentation, developed with AI assistance. See [upstream sources and credits](docs/REFERENCE.md#sources-and-credits), [NOTICE.md](NOTICE.md) and [LICENSE](LICENSE).
+This is an unofficial tool. **OCLP and its contributors provide the actual patches and boot support.** This repo provides surrounding code and documentation, developed with AI assistance. See [NOTICE.md](NOTICE.md) for upstream sources and credits, and [LICENSE](LICENSE).
