@@ -2,9 +2,9 @@
 
 **Short version:** in every OCLP **3.0.0 release candidate** published so far (RC1, RC2, RC3 and RC5; there is no RC4 release), *Create macOS Installer* looks for the automatic-patching package under a GitHub release called **`3.0.0`**. That release does not exist yet; the real ones are tagged `3.0.0-rc.1`, `-rc.2`, `-rc.3` and `-rc.5`. OCLP's fallback download then saves a **nightly.link "404 Not Found" web page** as the package. Unpacking that fails without being checked, so OCLP quietly skips the step that copies **`AutoPkg-Assets.pkg`** to the USB, and with it the step that adds **`KDK.pkg`**. It still reports the installer as created successfully.
 
-The result is a USB that installs macOS but **does not install OCLP or root patch afterwards**. The model doesn't matter. [`autopatch_rescue.py`](../autopatch_rescue.py) adds exactly the two files OCLP should have added.
+The result is a USB that installs macOS but **does not install OCLP or root patch afterwards**, whatever Mac it's for. How much that hurts depends on the Mac. [`autopatch_rescue.py`](../autopatch_rescue.py) adds the two files OCLP should have added.
 
-This was observed on 2026-11-05 with the official, notarised **OCLP 3.0.0-rc.5** app, creating a **macOS Tahoe 26.7.2 (25G332)** installer on an iMac18,2 for a MacBookPro11,3. The same code path exists in RC3, and the earlier RC3 USBs needed the same packages supplied by hand (see the [case study](CASE-STUDY.md#4-logs-identified-a-missing-matching-kdk)).
+This was observed on 2026-11-05 with the official, notarised **OCLP 3.0.0-rc.5** app, creating a **macOS Tahoe 26.7.2 (25G332)** installer on an iMac18,2 for a MacBookPro11,3. The same code path is in every 3.0.0 release candidate.
 
 ## What a complete OCLP USB contains
 
@@ -83,7 +83,7 @@ The log then shows **"Installer pkg validated"**, and OCLP offers to install Ope
 ## Which OCLP builds are affected
 
 - **Affected:** any OCLP build whose `patcher_version` has no GitHub release with exactly that name. That's every 3.0.0 release candidate (RC1, RC2, RC3, RC5), because all of them report `3.0.0`.
-- **Not affected:** final releases. Their version and tag are the same (for example `2.5.1`, the current latest release), so step 1 finds the package and nothing else goes wrong.
+- **Not affected:** final releases. Their version and tag are the same (for example `2.5.1`, the current latest release), so step 1 finds the package and the download works.
 - **Caution for later:** once a final `3.0.0` release is published, an **RC app** will find *that* package and copy the **3.0.0 final assets** onto the USB, which don't match the RC app you're running. Update OCLP to the final release before creating a USB at that point.
 - **In practice this means Tahoe.** The 3.0.0 RCs are the builds that add macOS Tahoe 26 support, so Tahoe installers are where people hit it. The code path itself would affect any Big Sur or newer installer made with an RC.
 - **Doesn't depend on the target Mac.** The download and copy happen before any model-specific logic. Every model built from an affected OCLP gets a USB without automatic patching.
@@ -116,7 +116,7 @@ Without the two packages, the chain breaks:
 2. **Patching by hand needs OCLP and the KDK**: you'd have to get the OCLP installer onto the Mac, and root patching then has to download the 25G332 KDK for Modern Audio.
 3. **But there's no network**: Wi-Fi is one of the things waiting to be patched, and this MacBook has no Ethernet port. Without a Thunderbolt Ethernet adapter or a USB Wi-Fi dongle, it can't download anything.
 
-With both packages on the USB, the installer installs OCLP and the KDK, root patches everything above on first boot **offline**, and restarts into a working system. The earlier RC3 install on this machine hit exactly this: the patch record showed Modern Wireless only, with the graphics patches missing and a failed KDK lookup ([case study](CASE-STUDY.md#4-logs-identified-a-missing-matching-kdk)).
+With both packages on the USB, the installer installs OCLP and the KDK, root patches everything above on first boot **offline**, and restarts into a working system.
 
 **For other Macs:** the missing-package bug is the same, but the patch list isn't. A Mac with built-in Ethernet can recover by patching manually; a Wi-Fi-only Mac usually can't. The KDK matters whenever any patch set returns `requires_kernel_debug_kit` for your macOS version. On Tahoe that includes Modern Audio for every Mac without a T2. Adding both packages, as OCLP intends, covers all models.
 
@@ -132,16 +132,16 @@ With both packages on the USB, the installer installs OCLP and the KDK, root pat
 python3 autopatch_rescue.py --usb "/Volumes/Install macOS Tahoe"
 ```
 
-It does what OCLP's code meant to do, using the correct release tag:
+Run it after OCLP's *Create macOS Installer* and *Build and Install OpenCore* onto the USB. It asks for your Mac password, which it needs to open the USB's EFI. It does what OCLP's code meant to do, using the correct release tag:
 
 1. Reads the installer's macOS build from the USB and the OCLP release tag from the installed app (`Info.plist → Github → Branch`, e.g. `refs/tags/3.0.0-rc.5`).
 2. Downloads `AutoPkg-Assets.pkg` from **that tag's** release and the `Kernel_Debug_Kit_<version>_build_<build>.dmg` from KdkSupportPkg. Each one is checked against the SHA-256 digest GitHub publishes. An HTML error page or a truncated file is rejected, not copied.
 3. Copies the package, and the Apple-signed `KernelDebugKit.pkg` from inside the disk image as `KDK.pkg`, into `Library/Packages/`, which is the same place and name OCLP uses. It verifies each copy before putting it in place.
 4. Never edits a package. Any package on the USB, or in its download cache, that doesn't match is **deleted and downloaded again**. Leftover partial copies are deleted too.
-5. Checks the OpenCore on the USB's EFI (needs `sudo`). If OCLP built it for the target Mac's own model (`OCLP-Model`, no SMBIOS spoof) and left `PlatformInfo/DataHub/SystemProductName` and `BoardProduct` empty with `UpdateDataHub` off, it sets them to that model and its board ID from OCLP's own table ([`oclp_board_ids.json`](../oclp_board_ids.json), from RC5's `smbios_data.py`). It backs up the config first, and it won't overwrite a value someone else set. This is a separate issue from the missing packages: on the MacBookPro11,3 the empty values caused the Lilu boot loop described in the [case study](CASE-STUDY.md#2-explicit-datahub-values-cleared-the-loop). OCLP RC5 still leaves them empty, and a control boot on 2026-11-05 with them left blank looped straight away ([TESTING.md](TESTING.md#2026-11-05-control-test-with-datahub-left-blank)).
+5. Checks the OpenCore on the USB's EFI. If OCLP built it for the target Mac's own model (`OCLP-Model`, no SMBIOS spoof) and left `PlatformInfo/DataHub/SystemProductName` and `BoardProduct` empty with `UpdateDataHub` off, it sets them to that model and its board ID from OCLP's own table ([`oclp_board_ids.json`](../oclp_board_ids.json), from RC5's `smbios_data.py`). It backs up the config first, and it won't overwrite a value someone else set. This is a separate issue from the missing packages: on the MacBookPro11,3 empty values cause a "failed to obtain model information" boot loop. OCLP RC5 leaves them empty, and a control boot on 2026-11-05 with them left blank looped straight away ([TESTING.md](TESTING.md#2026-11-05-control-test-with-datahub-left-blank)).
 6. Leaves files that are already correct alone, and keeps a small `.autopatch-rescue.json` record at the top of the USB so a later `--check` can verify `KDK.pkg`.
 
-Nothing is installed on the Mac you run it from, and no disk is erased. Build and install OpenCore onto the USB's EFI in OCLP as usual; the script doesn't touch the EFI.
+Nothing is installed on the Mac you run it from, and no disk is erased. On the USB's EFI it changes only those three DataHub settings, and only when they're missing.
 
 ## Confirmed on hardware
 
@@ -149,4 +149,4 @@ On 2026-11-05, a MacBookPro11,3 USB made with OCLP 3.0.0-rc.5 for Tahoe 26.7.2 (
 
 ## Upstream
 
-The underlying fix belongs in OCLP: build the release URL from the build's tag (not `patcher_version`), check the download and unzip results, and stop with a clear error instead of returning silently. A local fork branch (`codex/installer-assets-release-validation`, *"installer: select tagged assets and report preparation failures"*) prototypes this, but it hasn't been submitted upstream.
+The underlying fix belongs in OCLP: build the release URL from the build's tag (not `patcher_version`), check the download and unzip results, and stop with a clear error instead of returning silently.

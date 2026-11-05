@@ -1,14 +1,9 @@
 build/
 __pycache__/
 *.pyc
-kit/recovery-tool
-kit/*test-results.json
 .DS_Store
 *.pkg
 *.dmg
-*.kdk/
-*.tar.gz
-Repair-Logs/
 *.log
 .env
 .env.*

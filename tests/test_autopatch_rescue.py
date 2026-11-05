@@ -139,7 +139,7 @@ class RescueTests(unittest.TestCase):
 
     def test_wrong_assets_package_is_deleted_then_downloaded(self):
         self.packages().mkdir(parents=True)
-        (self.packages() / "AutoPkg-Assets.pkg").write_bytes(b"RC3 or truncated package")
+        (self.packages() / "AutoPkg-Assets.pkg").write_bytes(b"old or truncated package")
         code, out = self.run_main()
         self.assertEqual(code, 0)
         self.assertIn("deleting AutoPkg-Assets.pkg: does not match", out)
