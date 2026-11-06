@@ -53,10 +53,14 @@ The owner subsequently reported that `--check` showed the expected values.
 These are owner-supplied results; the preparation iMac did not independently
 read the MacBook's internal config. [Detailed evidence and source analysis](INTERNAL-DATAHUB.md).
 
-**Hardware limit:** the restored helper has now verified the corrected
-configuration on the MacBook, but successful USB-free starts after this
-correction have not yet been reported. The bundled TXT asks for an audit of
-the existing internal config **before** rebuilding OpenCore or applying changes.
+**Owner-reported outcome:** the owner now reports that the MacBook works after
+the internal DataHub correction and identifies the desktop finisher as the
+final step that wrote those values. The exact number of successful
+starts/restarts and a detailed boot transcript have not been supplied. The
+configuration verification is supported by the supplied helper output; the
+working-system result is owner-reported, without independent boot observation
+or a claim of repeated stability. The bundled TXT asks for an audit of the
+existing internal config **before** rebuilding OpenCore or applying changes.
 
 ```bash
 ./scripts/test.sh

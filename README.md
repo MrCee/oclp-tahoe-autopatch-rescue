@@ -96,6 +96,8 @@ This final tool supports **OCLP 3.0.0 RC5 and installed macOS Tahoe 26**, includ
 
 **Why the internal step is needed:** on the tested MacBook, the USB's DataHub settings were correct, but the internal EFI still had empty model/board values and `UpdateDataHub = false` after internal OpenCore installation. RC5 installs a newly generated OpenCore build; it does not automatically carry over the USB's manual DataHub edits. The standalone finisher changes just those three internal settings. If Tahoe, OpenCore and the required root patches are already installed, this correction does not require preparing another USB or reinstalling macOS. See the [developer evidence and proposed builder fix](docs/INTERNAL-DATAHUB.md).
 
+**Owner-reported result, 6 November:** the MacBook now works after the internal DataHub correction. The exact number of successful starts/restarts has not been recorded; this is a reported result on one MacBookPro11,3.
+
 1. Boot **USB EFI Boot → your installed Tahoe disk** and reach the desktop. Choose the installed disk, rather than starting the installer again. Keep the USB connected and writable.
 2. Open **`MBP113-Finish/READ-ME-FIRST.txt`** on the USB. **Check before rebuilding or changing anything:**
 

@@ -2,9 +2,10 @@
 
 On the tested **MacBookPro11,3**, a correct USB EFI did not result in a correct
 internal DataHub configuration after OCLP's internal OpenCore installation.
-An internal-only correction is sufficient to write and verify those settings
-on an otherwise installed system. Successful USB-free boots after the latest
-correction remain to be tested.
+An internal-only correction writes and verifies those settings on an
+otherwise installed system. The owner now reports that the MacBook works
+after this correction; the exact number of successful starts/restarts has
+not been recorded.
 
 ## Evidence from 6 November 2026
 
@@ -44,9 +45,15 @@ values. The full post-correction audit transcript has not been supplied.
 | `PlatformInfo/DataHub/BoardProduct` | Empty | `Mac-2BD1B31983FE1663` |
 | `PlatformInfo/UpdateDataHub` | `false` | `true` |
 
-This is terminal evidence from one MacBook, not an independent remote
-inspection. There is no newly reported USB-free boot result after this edit.
-The earlier successful start and later Lilu failure occurred before it.
+The owner subsequently reported that the system now works after the
+correction, identifying the desktop finisher as the final step that wrote
+the internal DataHub values. The earlier successful start and later Lilu
+failure occurred before this edit. No detailed post-fix boot transcript or
+exact count of successful starts/restarts has been supplied.
+
+This is terminal evidence and a reported working-system outcome from one
+MacBook, without an independent remote inspection or boot observation. It
+does not establish repeated stability or results on other models.
 
 ## What the RC5 source does
 
@@ -91,7 +98,7 @@ workaround and the model's existing spoofing behavior need review; this
 report does not justify applying it to every Mac or changing DataHub protocol
 overrides.
 
-The remaining hardware check is a successful internal-EFI start with the USB
-disconnected, followed by an ordinary restart. If Lilu returns, preserve the
-post-fix config and compare its hash/settings with the saved result while
-investigating the actual EFI selected at the failing boot.
+Further useful evidence would record the exact EFI selected, USB connection
+state and the count/results of post-fix starts and ordinary restarts. If Lilu
+returns, preserve the post-fix config and compare its hash/settings with the
+saved result while investigating the actual EFI selected at the failing boot.
