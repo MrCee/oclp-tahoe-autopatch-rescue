@@ -128,6 +128,29 @@ class RescueTests(unittest.TestCase):
         self.assertEqual(self.downloads, [])
         self.assertIn("PASS: nothing is missing", out)
 
+    def test_desktop_tools_restored_without_rewriting_correct_usb_config_or_packages(self):
+        self.run_main()
+        import shutil
+        shutil.rmtree(self.usb / "MBP113-Finish")
+        config = self.efi / "EFI/OC/config.plist"
+        before = config.read_bytes()
+        self.downloads.clear()
+        code, out = self.run_main("--check")
+        self.assertEqual(code, 1, out)
+        self.assertIn("Desktop final tool", out)
+        self.assertFalse((self.usb / "MBP113-Finish").exists())
+        code, out = self.run_main()
+        self.assertEqual(code, 0, out)
+        rescue.finish_bundle.verify(self.usb)
+        self.assertEqual(config.read_bytes(), before)
+        self.assertEqual(self.downloads, [])
+
+    def test_other_models_do_not_get_mbp113_desktop_tools(self):
+        self.write_config(model="iMac18,2")
+        code, out = self.run_main()
+        self.assertEqual(code, 0, out)
+        self.assertFalse((self.usb / "MBP113-Finish").exists())
+
     def test_check_reports_without_writing(self):
         code, out = self.run_main("--check")
         self.assertEqual(code, 1)
