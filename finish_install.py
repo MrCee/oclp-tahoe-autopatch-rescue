@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Preserve MacBookPro11,3 DataHub settings in the installed system's internal EFI.
+"""Preserve the detected OCLP Mac's DataHub settings in its internal EFI.
 
 Run from the installed Tahoe desktop after OCLP's Build and Install OpenCore.
-This standalone helper never installs OpenCore, root patches, packages or updates.
+Uses the bundled oclp_models.json; never installs OpenCore, patches or updates.
 """
 import argparse
 import contextlib
@@ -16,10 +16,9 @@ import re
 import subprocess
 import sys
 import tempfile
+from urllib.parse import unquote_to_bytes
 
 BASE = Path(__file__).resolve().parent
-MODEL = "MacBookPro11,3"
-BOARD = "Mac-2BD1B31983FE1663"
 OCLP_GUID = "4D1FDA02-38C7-4A6A-9CC6-4BCCA8B30102"
 PARTITION = re.compile(r"disk[0-9]+s[0-9]+")
 WHOLE_DISK = re.compile(r"disk[0-9]+")
@@ -30,22 +29,80 @@ class FinishError(ValueError):
 
 
 def output(command):
-    return subprocess.check_output(command)
+    return subprocess.check_output(command, stderr=subprocess.STDOUT)
 
 
 def disk_info(device):
     return plistlib.loads(output(["/usr/sbin/diskutil", "info", "-plist", str(device)]))
 
 
+def model_table():
+    try:
+        data = json.loads(safe_path(BASE, "oclp_models.json").read_text())
+    except (OSError, ValueError) as exc:
+        raise FinishError("The bundled OCLP model table could not be read; restore oclp_models.json: " + str(exc))
+    models = data.get("models") if isinstance(data, dict) else None
+    if not isinstance(models, dict) or not models:
+        raise FinishError("The bundled OCLP model table is missing its models dictionary.")
+    for model, info in models.items():
+        if (not isinstance(model, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*[0-9]+,[0-9]+", model)
+                or not isinstance(info, dict) or not isinstance(info.get("board_id"), str)
+                or not re.fullmatch(r"Mac-[0-9A-Fa-f]{8,16}", info["board_id"])
+                or not isinstance(info.get("name"), str) or not info["name"].strip()
+                or any(ord(c) < 32 for c in info["name"])):
+            raise FinishError("Invalid model or board-ID data in bundled OCLP model table: " + repr(model))
+    return models
+
+
+def model_details(model):
+    info = model_table().get(model)
+    if info is None:
+        raise FinishError("Unknown Mac model " + repr(model) + "; it is not in the bundled OCLP model table. No EFI changed.")
+    return dict(info, model=model)
+
+
+def original_model():
+    """Read only OCLP's original-model hint, never the bootloader target hint."""
+    variable = OCLP_GUID + ":oem-product"
+    try:
+        value = output(["/usr/sbin/nvram", variable]).decode("utf-8").strip()
+    except subprocess.CalledProcessError as exc:
+        error = (exc.output or b"").decode("utf-8", errors="replace").lower()
+        if "data was not found" in error:
+            return None
+        raise FinishError("Could not read OCLP's original-model NVRAM hint; no EFI changed: " + error.strip())
+    except UnicodeError as exc:
+        raise FinishError("Malformed original-model NVRAM hint: " + str(exc))
+    pieces = value.split(None, 1)
+    if len(pieces) != 2 or pieces[0] != variable:
+        raise FinishError("Malformed original-model NVRAM hint; no EFI changed.")
+    try:
+        model = unquote_to_bytes(pieces[1]).rstrip(b"\x00").decode("utf-8")
+    except UnicodeError as exc:
+        raise FinishError("Malformed original-model NVRAM hint: " + str(exc))
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9]*[0-9]+,[0-9]+", model):
+        raise FinishError("Malformed original-model NVRAM hint; no EFI changed.")
+    return model
+
+
 def validate_host():
-    model = output(["/usr/sbin/sysctl", "-n", "hw.model"]).decode().strip()
+    reported = output(["/usr/sbin/sysctl", "-n", "hw.model"]).decode().strip()
     version = output(["/usr/bin/sw_vers", "-productVersion"]).decode().strip()
     build = output(["/usr/bin/sw_vers", "-buildVersion"]).decode().strip()
     kernel = output(["/usr/bin/uname", "-r"]).decode().strip()
-    if model != MODEL or version.split(".")[0] != "26" or kernel.split(".")[0] != "25":
-        raise FinishError("Run this on the MacBookPro11,3 installed macOS Tahoe desktop, "
+    if version.split(".")[0] != "26" or kernel.split(".")[0] != "25":
+        raise FinishError("Run this on the target Mac's installed macOS Tahoe desktop, "
                           "not the preparation Mac or Recovery. No EFI changed.")
-    return {"model": model, "macos_version": version, "macos_build": build}
+    oem = original_model()
+    model = oem or reported
+    info = model_details(model)
+    if oem and oem != reported:
+        raise FinishError("Reported Mac model " + repr(reported) + " disagrees with OCLP's original model "
+                          + repr(oem) + "; review SMBIOS spoofing in OCLP before using this helper. No EFI changed.")
+    return {"model": model, "name": info["name"], "board_id": info["board_id"],
+            "reported_model": reported,
+            "model_source": "OCLP oem-product NVRAM" if oem else "hw.model (no OCLP oem-product hint)",
+            "macos_version": version, "macos_build": build}
 
 
 def safe_path(root, relative):
@@ -212,26 +269,56 @@ def check_boot_files(mount, config):
     return " + ".join(layouts)
 
 
-def corrected_config(original):
-    config = copy.deepcopy(original)
+def installed_target(config):
     target = config.get("NVRAM", {}).get("Add", {}).get(OCLP_GUID, {}).get("OCLP-Model")
-    revision = config.get("#Revision", {}).get("Original-Model", MODEL)
-    if target != MODEL or revision != MODEL:
-        raise FinishError("OCLP must already have been built for MacBookPro11,3 on the internal EFI.")
+    revision = config.get("#Revision", {}).get("Original-Model")
+    if not target or (revision and revision != target):
+        raise FinishError("Internal OpenCore has missing or inconsistent OCLP model metadata. "
+                          "In OCLP choose Settings → Target Model for this Mac, then Build and Install "
+                          "OpenCore to its internal EFI. No config changed.")
+    return model_details(target)
+
+
+def corrected_config(original, host_model):
+    config = copy.deepcopy(original)
+    target = installed_target(config)
+    if target["model"] != host_model:
+        raise FinishError("Internal OpenCore target " + target["model"] + " does not match detected Mac "
+                          + host_model + ". In OCLP choose Settings → Target Model → " + host_model
+                          + ", then Build and Install OpenCore to the internal EFI. "
+                          "Changing only DataHub cannot retarget a complete OpenCore build. No config changed.")
     platform = config.get("PlatformInfo")
     if not isinstance(platform, dict) or not isinstance(platform.get("DataHub"), dict):
         raise FinishError("Expected an existing OCLP PlatformInfo/DataHub section.")
     generic = platform.get("Generic", {}).get("SystemProductName", "")
-    if platform.get("Automatic") or platform.get("UpdateSMBIOS") or generic not in ("", MODEL):
+    if platform.get("Automatic") or platform.get("UpdateSMBIOS") or generic not in ("", host_model):
         raise FinishError("This OpenCore config uses automatic or spoofed model information; "
                           "review it in OCLP instead of overwriting it.")
-    for key, expected in (("SystemProductName", MODEL), ("BoardProduct", BOARD)):
+    for key, expected in (("SystemProductName", target["model"]), ("BoardProduct", target["board_id"])):
         current = platform["DataHub"].get(key)
         if current not in (None, "", expected):
             raise FinishError("Conflicting DataHub " + key + ": " + repr(current) + "; no config changed.")
         platform["DataHub"][key] = expected
     platform["UpdateDataHub"] = True
     return config
+
+
+def confirm_target(target, yes=False):
+    if yes:
+        return
+    if not sys.stdin.isatty():
+        raise FinishError("Use an interactive Terminal to confirm the detected target, or supply --yes. "
+                          "To change models, choose OCLP Settings → Target Model and rebuild the complete "
+                          "internal OpenCore first. No config changed.")
+    print("Use this detected target, or stop and change Target Model in OCLP and rebuild the complete internal OpenCore.")
+    try:
+        answer = input("Use " + target["name"] + " (" + target["model"] + ") and apply the three DataHub settings? "
+                       "[u]se / [c]hange target in OCLP / [N] ")
+    except (EOFError, KeyboardInterrupt):
+        answer = ""
+    if answer.strip().lower() not in ("u", "use", "y", "yes"):
+        raise FinishError("Stopped without changing the internal config. To change models, choose OCLP "
+                          "Settings → Target Model and Build and Install OpenCore to the internal EFI, then rerun.")
 
 
 def save_config(path, before, expected):
@@ -264,6 +351,7 @@ def save_config(path, before, expected):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="Audit only; mount an unmounted EFI read-only")
+    parser.add_argument("--yes", action="store_true", help="Use the detected matching target without prompting")
     args = parser.parse_args(argv)
     if sys.version_info < (3, 9):
         raise FinishError("Python 3.9 or newer is required.")
@@ -271,8 +359,10 @@ def main(argv=None):
     if os.geteuid() != 0:
         command = ["/usr/bin/sudo", sys.executable, "-I", "-B", str(Path(__file__).resolve())]
         command.extend(["--check"] if args.check else [])
+        command.extend(["--yes"] if args.yes else [])
         os.execv(command[0], command)
-    print("Running Mac:", host["model"], "— macOS", host["macos_version"], "(" + host["macos_build"] + ")")
+    print("Detected Mac:", host["name"], "(" + host["model"] + ") — macOS", host["macos_version"], "(" + host["macos_build"] + ")")
+    print("Model evidence:", host["model_source"], "— reported hw.model:", host["reported_model"])
     initial = internal_efi()
     with mounted_efi(initial, args.check) as mount:
         path = safe_path(mount, "EFI/OC/config.plist")
@@ -291,13 +381,20 @@ def main(argv=None):
             print("DataHub/BoardProduct:", repr(datahub.get("BoardProduct")))
         print("PlatformInfo/UpdateDataHub:", repr(platform.get("UpdateDataHub"))
               if isinstance(platform, dict) else "missing")
-        expected = corrected_config(original)
+        target = installed_target(original)
+        print("Installed OpenCore target:", target["name"], "(" + target["model"] + ")")
+        print("Expected board ID from OCLP table:", target["board_id"])
+        expected = corrected_config(original, host["model"])
         layout = check_boot_files(mount, original)
         if args.check:
             if expected != original:
                 raise FinishError("Internal EFI needs the DataHub fix. Run again without --check.")
             print("PASS: internal EFI files and DataHub settings verify. USB-free boot still needs testing.")
             return
+        if expected == original:
+            print("PASS: internal EFI files and DataHub settings already verify; no changes needed. USB-free boot still needs testing.")
+            return
+        confirm_target(target, args.yes)
         stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
         report_dir = safe_path(BASE, "build/internal-efi/" + stamp)
         report_dir.mkdir(parents=True)
@@ -305,7 +402,8 @@ def main(argv=None):
         report_path = safe_path(BASE, "build/internal-efi/" + stamp + "/report.json")
         report = dict(host, status="incomplete", efi_device=initial["DeviceIdentifier"],
                       efi_uuid=initial["DiskUUID"], system_identity=initial["SystemIdentity"],
-                      boot_layout=layout, changed=False, usb_free_boot_verified=False)
+                      boot_layout=layout, installed_oclp_target=target["model"],
+                      changed=False, usb_free_boot_verified=False)
         try:
             if validate_host() != host:
                 raise FinishError("Running Mac identity changed; no config write.")

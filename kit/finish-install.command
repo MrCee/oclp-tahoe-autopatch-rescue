@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e -o pipefail
 
-finish_machine_model() { /usr/sbin/sysctl -n hw.model; }
 finish_macos_version() { /usr/bin/sw_vers -productVersion; }
 finish_darwin_version() { /usr/bin/uname -r; }
 
@@ -80,13 +79,13 @@ verify_finish_bundle() {
     "$finish_python" -I - "$finish_bundle_dir" <<'PY'
 import hashlib, json, pathlib, sys
 folder = pathlib.Path(sys.argv[1])
-expected = {'finish_install.py', 'finish-install.command', 'READ-ME-FIRST.txt'}
+expected = {'finish_install.py', 'oclp_models.json', 'finish-install.command', 'READ-ME-FIRST.txt'}
 try:
     manifest_path = folder / 'manifest.json'
     if folder.is_symlink() or manifest_path.is_symlink():
         raise ValueError('symlinked bundle or manifest')
     manifest = json.loads(manifest_path.read_text())
-    if (manifest.get('format') != 2 or manifest.get('model') != 'MacBookPro11,3'
+    if (manifest.get('format') != 3 or 'model' in manifest
             or manifest.get('macos_major') != 26 or set(manifest['sha256']) != expected):
         raise ValueError('unexpected manifest')
     for name, digest in manifest['sha256'].items():
@@ -103,12 +102,13 @@ finish_main() {
     for finish_arg in "$@"; do
         case "$finish_arg" in
             --check) finish_check=1 ;;
-            -h|--help) echo 'Usage: finish-install.command [--check]'; return 0 ;;
+            --yes) ;;
+            -h|--help) echo 'Usage: finish-install.command [--check] [--yes]'; return 0 ;;
             *) echo 'STOP: Unknown option:' "$finish_arg"; return 1 ;;
         esac
     done
-    if [[ "$(finish_machine_model)" != MacBookPro11,3 || "$(finish_macos_version)" != 26.* || "$(finish_darwin_version)" != 25.* ]]; then
-        echo 'STOP: Run this on the installed MacBookPro11,3 Tahoe 26 desktop, not the preparation Mac or Recovery.'
+    if [[ "$(finish_macos_version)" != 26.* || "$(finish_darwin_version)" != 25.* ]]; then
+        echo 'STOP: Run this on the installed macOS Tahoe 26 desktop. The helper checks this Mac and its internal OpenCore target.'
         return 1
     fi
     finish_bundle_dir="$(cd -- "$(dirname -- "$0")" && pwd -P)"
@@ -119,7 +119,7 @@ finish_main() {
             return 1
         fi
         verify_finish_bundle
-        "$finish_python" -I -B "$finish_bundle_dir/finish_install.py" --check
+        "$finish_python" -I -B "$finish_bundle_dir/finish_install.py" "$@"
         return
     fi
     if [[ $EUID != 0 ]]; then
@@ -130,7 +130,7 @@ finish_main() {
         return 1
     fi
     /bin/mkdir -p "$finish_bundle_dir/build/bootstrap"
-    finish_log="$(/usr/bin/mktemp "$finish_bundle_dir/build/bootstrap/setup-XXXXXXXX.log")"
+    finish_log="$(/usr/bin/mktemp "$finish_bundle_dir/build/bootstrap/setup-XXXXXXXX")"
     exec > >(/usr/bin/tee -a "$finish_log") 2>&1
     echo 'Setup log:' "$finish_log"
     if [[ -z "$finish_python" ]]; then
@@ -144,7 +144,7 @@ finish_main() {
     verify_finish_bundle
     echo 'Using Python:' "$finish_python"
     echo 'OCLP must already be installed to the internal EFI. Only its DataHub model settings will be completed.'
-    "$finish_python" -I -B "$finish_bundle_dir/finish_install.py"
+    "$finish_python" -I -B "$finish_bundle_dir/finish_install.py" "$@"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

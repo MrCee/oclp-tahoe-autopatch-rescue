@@ -55,6 +55,12 @@ This is terminal evidence and a reported working-system outcome from one
 MacBook, without an independent remote inspection or boot observation. It
 does not establish repeated stability or results on other models.
 
+The terminal results above came from the original `MBP113-Finish/` bundle.
+The current tool is packaged as generic `OCLP-Finish/`, with model/board lookup
+from the existing OCLP model table and a running-Mac/internal-target comparison.
+That refactor has fixture coverage; the earlier MacBook result is not a new
+hardware test of the generic version.
+
 ## What the RC5 source does
 
 RC5 builds a fresh OpenCore tree and config from its payload/template, applies

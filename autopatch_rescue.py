@@ -492,7 +492,7 @@ def report(want, assets_ok, kdk_ok, efi, finish_ok=None):
         else:
             say(f"  {'DataHub':<20} MISSING {', '.join(efi['missing'])} -> set {efi['model']}, {efi['board']}, UpdateDataHub on")
     if finish_ok is not None:
-        say(f"  {'Desktop final tool':<20} {'OK' if finish_ok else 'MISSING/outdated -> copy MBP113-Finish onto USB'}")
+        say(f"  {'Desktop final tool':<20} {'OK' if finish_ok else 'MISSING/outdated -> copy ' + finish_bundle.FOLDER + ' onto USB'}")
     say("")
     return not (assets_ok and kdk_ok and (efi is None or efi["status"] != "missing")
                 and finish_ok is not False)
@@ -532,7 +532,7 @@ def main(argv=None):
         assets_ok, kdk_ok, _ = inspect(args.usb, want)
         efi = None if args.packages_only else efi_read(args.usb)
         finish_ok = None
-        if efi and efi["model"] == "MacBookPro11,3" and efi["status"] != "spoofed":
+        if efi and efi["status"] != "spoofed":
             try:
                 finish_bundle.verify(args.usb)
                 finish_ok = True
@@ -563,8 +563,8 @@ def main(argv=None):
             stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
             backup_dir = Path(__file__).resolve().parent / "build/finish-bundle-backups" / stamp
             finish_bundle.install(args.usb, backup_dir)
-            say("Desktop final tool: copied and verified USB MBP113-Finish/finish-install.command.")
-            say("Run it on the MacBook desktop after OCLP installs OpenCore to its internal drive.")
+            say(f"Desktop final tool: copied and verified USB {finish_bundle.FOLDER}/finish-install.command.")
+            say("Run it on the target Mac desktop after OCLP installs OpenCore to its internal drive.")
         say("PASS: the USB is ready. Eject it and boot the target Mac from the USB's EFI Boot.")
         return 0
     except (FixError, OSError, ValueError) as error:

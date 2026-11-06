@@ -1,4 +1,4 @@
-"""Bundle the standalone MacBookPro11,3 internal EFI finisher on an installer USB."""
+"""Bundle the model-aware internal EFI finisher on an installer USB."""
 import hashlib
 import json
 import os
@@ -6,23 +6,23 @@ from pathlib import Path
 import tempfile
 
 BASE = Path(__file__).resolve().parent
-FOLDER = "MBP113-Finish"
+FOLDER = "OCLP-Finish"
 LAUNCHER = "finish-install.command"
-GUIDE = '''Finish internal OpenCore on MacBookPro11,3 / macOS Tahoe 26
+GUIDE = '''Finish internal OpenCore DataHub / macOS Tahoe 26
 
-Audit the MacBook FIRST. Do not rebuild OpenCore before checking its existing
+Audit the Mac FIRST. Do not rebuild OpenCore before checking its existing
 internal configuration. The working USB's EFI and the internal SSD's EFI are
 separate configurations: correcting one does not correct the other.
 
 1. Boot the installed Tahoe desktop through the working USB's EFI Boot.
 2. Inspect the internal configuration without changing it. In Terminal run:
-   /bin/bash "/Volumes/Install macOS Tahoe/MBP113-Finish/finish-install.command" --check
+   /bin/bash "/Volumes/Install macOS Tahoe/OCLP-Finish/finish-install.command" --check
    Replace the USB volume name if needed. Administrator access may be requested
    to open the internal EFI read-only. --check never installs tools or creates
    setup logs. If Python 3.9+ is missing, it stops; ask Codex to complete the
    read-only inspection using available tools before installing anything.
 3. Read the result before making changes:
-   - If internal OpenCore is absent, install OCLP RC5 OpenCore for MacBookPro11,3
+   - If internal OpenCore is absent, use OCLP to build OpenCore for this Mac
      onto the INTERNAL disk's EFI. Do not reboot yet. Check again.
    - If OpenCore exists and only the three DataHub settings are missing, run
      the normal finishing command below after reviewing the audit.
@@ -32,18 +32,37 @@ separate configurations: correcting one does not correct the other.
 
 Only when the audit establishes that a correction is needed, double-click
 finish-install.command, or run:
-   /bin/bash "/Volumes/Install macOS Tahoe/MBP113-Finish/finish-install.command"
-Enter the MacBook's administrator password when asked. Require PASS: internal
-EFI configuration verified. Then, when ready to test, shut down, remove the USB,
-hold Option and select internal EFI Boot followed by Macintosh HD. Test an
-ordinary restart too. Keep the working USB for recovery.
+   /bin/bash "/Volumes/Install macOS Tahoe/OCLP-Finish/finish-install.command"
+Enter the Mac's administrator password when asked. The helper detects and
+shows the installed OpenCore build target and the running Mac, then asks you
+to use the matching target or stop. Confirm only if this is the right Mac.
+To change the target, stop and rebuild/install the complete OpenCore build
+through OCLP for the intended Mac, then run the audit again. Changing three
+DataHub fields cannot retarget model-specific drivers, patches or USB maps.
+There is no arbitrary model override. --yes skips the confirmation question,
+but it does not bypass the model, disk or configuration checks.
+
+Require PASS: internal EFI configuration verified. Then, when ready to test,
+shut down, remove the USB, hold Option and select internal EFI Boot followed
+by the installed Tahoe disk. Test an ordinary restart too. Keep the working
+USB for recovery.
 
 The finisher changes only these three DataHub settings in the existing internal
 OpenCore configuration: SystemProductName, BoardProduct and UpdateDataHub.
+The matching model and board ID come from the bundled OCLP model table. The
+manifest verifies bundle integrity; it does not choose or prove the Mac model.
+The helper reads the existing internal OCLP build target and checks it against
+the running Mac. Unknown, inconsistent, conflicting or spoofed targets stop
+for review. The tool does not use the USB's target as the internal target.
 It backs up the configuration and reads the result back. It does not install
 OpenCore, change root patches, install the KDK, erase a disk or restart the Mac.
 Run it again after rebuilding internal OpenCore. A PASS verifies configuration;
 successful booting without the USB still needs a separate test.
+
+The generic path is covered by fixture tests. Hardware success has been
+reported on MacBookPro11,3 only; other models have not been hardware-tested.
+An existing MBP113-Finish folder is historical and is left untouched. Use this
+OCLP-Finish folder for the current model-aware tool.
 
 The launcher reuses working Python 3.9 or newer. If none is available, normal
 mode installs only the newest stable compatible Apple Command Line Tools
@@ -54,26 +73,33 @@ backup is saved beside the internal EFI config; retain the paths it prints.
 Normal mode proceeds to the DataHub correction after prerequisites are ready;
 do not use it merely to install Python during the initial read-only audit.
 
-HANDOVER TO CODEX ON THE MACBOOK (copy and paste this prompt)
+HANDOVER TO CODEX ON THE TARGET MAC (copy and paste this prompt)
 
 Read the READ-ME-FIRST.txt beside finish-install.command on the connected USB.
 This is a read-only audit first. Check the actual Mac model, running macOS
-version and exact build, and installed OCLP release tag (expected 3.0.0-rc.5;
-the app's displayed 3.0.0 alone does not identify its release candidate).
+version and exact build, and installed OCLP release tag. The app's displayed
+3.0.0 alone does not identify its release candidate.
 Identify the INTERNAL EFI belonging to the currently running installed APFS
 system; open it read-only and inspect its existing EFI/OC/config.plist before
-any rebuild. Compare it with the USB's EFI/OC/config.plist, reading the USB
-without changing it. Report the actual values from each separately:
-PlatformInfo/DataHub/SystemProductName = MacBookPro11,3
-PlatformInfo/DataHub/BoardProduct = Mac-2BD1B31983FE1663
-PlatformInfo/UpdateDataHub = true
+any rebuild. Read its OCLP-Model and #Revision/Original-Model and compare them
+with the running Mac. Distinguish the hardware/reported model, the installed
+build target and any SMBIOS spoof. Live NVRAM can describe the USB currently
+supplying the boot; read the internal build target from its own config file.
+Compare it with the USB's EFI/OC/config.plist, reading the USB without changing
+it. Report these actual values from each separately, and compare them with the
+matching model and board ID in the bundled oclp_models.json:
+PlatformInfo/DataHub/SystemProductName
+PlatformInfo/DataHub/BoardProduct
+PlatformInfo/UpdateDataHub
 Check /Library/Developer/KDKs for a KDK matching the RUNNING macOS build, and
 read the OCLP root-patch record if available. Distinguish a KDK package merely
-present on the USB from the KDK actually installed on this MacBook, and
+present on the USB from the KDK actually installed on this Mac, and
 configuration verification from a successful boot without USB. Report the
 findings and proposed next step before any OpenCore rebuild, configuration
 edit, package/tools installation, root patch or reboot. Never edit the working
-USB during this audit. Follow the MacBook's local AGENTS.md instructions.
+USB during this audit. Do not retarget the build merely by changing DataHub;
+changing the Mac target requires a complete OCLP build/install for that Mac.
+Follow this Mac's local AGENTS.md instructions.
 
 END HANDOVER PROMPT
 
@@ -103,10 +129,11 @@ def safe(root, relative):
 def contents():
     files = {
         "finish_install.py": (BASE / "finish_install.py").read_bytes(),
+        "oclp_models.json": (BASE / "oclp_models.json").read_bytes(),
         LAUNCHER: (BASE / "kit" / LAUNCHER).read_bytes(),
         "READ-ME-FIRST.txt": GUIDE.encode(),
     }
-    manifest = {"format": 2, "model": "MacBookPro11,3", "macos_major": 26,
+    manifest = {"format": 3, "macos_major": 26,
                 "sha256": {name: hashlib.sha256(data).hexdigest() for name, data in files.items()}}
     files["manifest.json"] = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
     return files

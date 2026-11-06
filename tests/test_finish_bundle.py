@@ -21,6 +21,10 @@ class FinishBundleTests(unittest.TestCase):
         self.source = self.root / "source"
         (self.source / "kit").mkdir(parents=True)
         (self.source / "finish_install.py").write_text("print('fixture finisher')\n")
+        (self.source / "oclp_models.json").write_text(json.dumps({"models": {
+            "MacBookPro11,3": {"board_id": "Mac-2BD1B31983FE1663", "name": "Fixture MacBook Pro"},
+            "iMac18,2": {"board_id": "Mac-77F17D7DA9285301", "name": "Fixture iMac"},
+        }}))
         launcher = Path(__file__).resolve().parent.parent / "kit" / bundle.LAUNCHER
         (self.source / "kit" / bundle.LAUNCHER).write_bytes(launcher.read_bytes())
         self.usb = self.root / "usb"
@@ -36,12 +40,24 @@ class FinishBundleTests(unittest.TestCase):
 
     def test_bundle_is_self_contained_and_manifest_matches(self):
         result = bundle.install(self.usb, self.backup)
-        self.assertEqual(set(result["files"]), {"finish_install.py", bundle.LAUNCHER, "READ-ME-FIRST.txt", "manifest.json"})
+        self.assertEqual(bundle.FOLDER, "OCLP-Finish")
+        self.assertEqual(set(result["files"]), {"finish_install.py", "oclp_models.json", bundle.LAUNCHER, "READ-ME-FIRST.txt", "manifest.json"})
         manifest = json.loads((self.folder / "manifest.json").read_text())
-        self.assertEqual((manifest["format"], manifest["model"], manifest["macos_major"]), (2, "MacBookPro11,3", 26))
+        self.assertEqual((manifest["format"], manifest["macos_major"]), (3, 26))
+        self.assertNotIn("model", manifest)
         self.assertNotIn("build", manifest)
         for name, digest in manifest["sha256"].items():
             self.assertEqual(hashlib.sha256((self.folder / name).read_bytes()).hexdigest(), digest)
+        bundle.verify(self.usb)
+
+    def test_old_model_specific_folder_is_preserved(self):
+        old = self.usb / "MBP113-Finish"
+        old.mkdir()
+        old_script = old / "finish-install.command"
+        old_script.write_text("historical snapshot\n")
+        bundle.install(self.usb, self.backup)
+        self.assertEqual(old_script.read_text(), "historical snapshot\n")
+        self.assertEqual(list(old.iterdir()), [old_script])
         bundle.verify(self.usb)
 
     def test_repeat_keeps_existing_logs_and_creates_no_backups(self):
@@ -103,7 +119,7 @@ class FinishBundleTests(unittest.TestCase):
 
     def test_verify_detects_tampering(self):
         bundle.install(self.usb, self.backup)
-        (self.folder / "finish_install.py").write_text("changed")
+        (self.folder / "oclp_models.json").write_text("changed model table")
         with self.assertRaisesRegex(ValueError, "outdated"):
             bundle.verify(self.usb)
 
@@ -121,7 +137,6 @@ class FinishBundleTests(unittest.TestCase):
     def test_check_without_python_stops_before_setup_or_log_creation(self):
         bundle.install(self.usb, self.backup)
         shell = '''source "$1"
-finish_machine_model() { echo MacBookPro11,3; }
 finish_macos_version() { echo 26.7.2; }
 finish_darwin_version() { echo 25.7.0; }
 find_finish_python() { return 1; }
@@ -134,17 +149,43 @@ finish_main --check
         self.assertNotIn("UNEXPECTED", result.stdout)
         self.assertFalse((self.folder / "build").exists())
 
-    def test_wrong_host_stops_before_python_discovery(self):
+    def test_wrong_macos_stops_before_python_discovery(self):
         launcher = self.source / "kit" / bundle.LAUNCHER
         shell = '''source "$1"
-finish_machine_model() { echo iMac18,2; }
+finish_macos_version() { echo 15.8.1; }
 find_finish_python() { echo UNEXPECTED-PYTHON-DISCOVERY; exit 99; }
 finish_main --check
 '''
         result = subprocess.run(["/bin/bash", "-c", shell, "fixture", str(launcher)], capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("not the preparation Mac", result.stdout)
+        self.assertIn("installed macOS Tahoe 26", result.stdout)
         self.assertNotIn("UNEXPECTED", result.stdout)
+
+    def test_audit_forwards_yes_and_check_to_fixture_finisher(self):
+        (self.source / "finish_install.py").write_text("import json, sys\nprint(json.dumps(sys.argv[1:]))\n")
+        bundle.install(self.usb, self.backup)
+        launcher = self.folder / bundle.LAUNCHER
+        shell = '''source "$1"
+fixture_python="$2"
+finish_macos_version() { echo 26.7.2; }
+finish_darwin_version() { echo 25.7.0; }
+find_finish_python() { printf '%s\\n' "$fixture_python"; }
+install_finish_tools() { echo UNEXPECTED-TOOLS-INSTALL; exit 99; }
+finish_main --check --yes
+'''
+        result = subprocess.run(["/bin/bash", "-c", shell, str(self.folder / "fixture-launch"), str(launcher), sys.executable], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(json.loads(result.stdout), ["--check", "--yes"])
+        self.assertFalse((self.folder / "build").exists())
+
+    def test_darwin_setup_log_template_produces_unique_filenames(self):
+        log_dir = self.root / "fixture-logs"
+        log_dir.mkdir()
+        template = str(log_dir / "setup-XXXXXXXX")
+        names = [subprocess.check_output(["/usr/bin/mktemp", template], text=True).strip() for _ in range(2)]
+        self.assertNotEqual(names[0], names[1])
+        self.assertTrue(all(Path(name).is_file() for name in names))
+        self.assertTrue(all("XXXXXXXX" not in Path(name).name for name in names))
 
     def test_clt_selection_uses_newest_stable_exact_label_only(self):
         launcher = self.source / "kit" / bundle.LAUNCHER
