@@ -28,36 +28,13 @@ Same USB and same MacBookPro11,3. Only the OpenCore config was changed: OCLP's o
 
 ## Automated checks
 
-### 2026-11-06: restored RC5 desktop finisher
-
-`finish_install.py` is now standalone and accepts installed Tahoe 26 on
-MacBookPro11,3, including **RC5 / 26.7.2 / 25G332**. It is no longer pinned to
-the retired RC3 build 25G241 or dependent on its deleted modules. The only EFI
-changes are the three DataHub values. USB preparation now also supplies the
-small finishing bundle for an unspoofed MacBookPro11,3 build.
-
-The restored tool and launcher are checked with fixtures for internal-disk
-selection, backups/read-back, conflicting settings, missing boot files,
-read-only audit mode, bundle integrity, and prerequisite-tool handling. A
-read-only disk-selection check also followed the preparation iMac's running
-APFS snapshot to its physical disk successfully; invoking the full helper on
-that iMac stopped at the wrong-model guard before mounting or editing EFI.
-
-**Hardware limit:** this restored standalone RC5 finisher has not yet been run
-on the MacBook. Its audit and subsequent USB-free boot test are still pending.
-The earlier hardware results above do not establish a successful boot with
-this new helper. The bundled TXT asks for an audit of the MacBook's existing
-internal config **before** rebuilding OpenCore or applying changes.
-
 ```bash
 ./scripts/test.sh
 ```
 
 | Suite | Checks | Method |
 | :--- | ---: | :--- |
-| Autopatch Rescue | 38 | Fake installer USB, EFI and GitHub releases; no network, disk images or real disks. Covers adding both packages, skipping correct files, `--check` without writes, deleting wrong packages, cached downloads and partial copies before re-downloading, corrupt and HTML-error downloads, missing digests, a missing KDK release and `--kdk-build`, an unsigned KDK, internal or non-installer volumes, pre-Big Sur installers, low space, reading the OCLP tag, and the EFI DataHub step (filling empty values from the built model, board ID per model, keeping correct or spoofed configs, refusing to overwrite conflicting values or non-OCLP configs, `--check` and `--packages-only`), the summary report, the confirmation question (answering no changes nothing; no terminal without `--yes` changes nothing), and restoring the desktop bundle without rewriting correct USB settings or packages. |
-| Desktop bundle/launcher | 11 | Temporary folders and stubbed tools; no real installation. Checks hashes, standalone contents, backups, retained logs, symlinks, stable exact CLT package selection, audit mode without Python, and wrong-host refusal. |
-| Internal EFI finisher | 24 | Simulated APFS systems and EFI files; no real EFI writes. Checks the running system's physical disk, model/build guards, conflicting/spoofed settings, enabled boot files, backups, atomic writes, read-back, repeat runs and read-only audit behavior. |
+| Autopatch Rescue | 36 | Fake installer USB, EFI and GitHub releases; no network, disk images or real disks. Covers adding both packages, skipping correct files, `--check` without writes, deleting wrong packages, cached downloads and partial copies before re-downloading, corrupt and HTML-error downloads, missing digests, a missing KDK release and `--kdk-build`, an unsigned KDK, internal or non-installer volumes, pre-Big Sur installers, low space, reading the OCLP tag, and the EFI DataHub step (filling empty values from the built model, board ID per model, keeping correct or spoofed configs, refusing to overwrite conflicting values or non-OCLP configs, `--check` and `--packages-only`), the summary report, and the confirmation question (answering no changes nothing; no terminal without `--yes` changes nothing). |
 
 ## Not covered
 

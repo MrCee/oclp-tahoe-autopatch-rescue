@@ -48,8 +48,6 @@ import time
 import urllib.error
 import urllib.request
 
-import finish_bundle
-
 OCLP_REPO = "dortania/OpenCore-Legacy-Patcher"
 KDK_REPO = "dortania/KdkSupportPkg"
 OCLP_APP = Path("/Library/Application Support/Dortania/OpenCore-Patcher.app")
@@ -470,7 +468,7 @@ def efi_fix(usb):
 
 # ----------------------------------------------------------------- the report
 
-def report(want, assets_ok, kdk_ok, efi, finish_ok=None):
+def report(want, assets_ok, kdk_ok, efi):
     """Show what this USB will install and what is missing. Returns True if anything needs fixing."""
     version = want["macos_version"]
     say("")
@@ -491,11 +489,8 @@ def report(want, assets_ok, kdk_ok, efi, finish_ok=None):
             say(f"  {'DataHub':<20} OK ({efi['model']}, {efi['board']})")
         else:
             say(f"  {'DataHub':<20} MISSING {', '.join(efi['missing'])} -> set {efi['model']}, {efi['board']}, UpdateDataHub on")
-    if finish_ok is not None:
-        say(f"  {'Desktop final tool':<20} {'OK' if finish_ok else 'MISSING/outdated -> copy MBP113-Finish onto USB'}")
     say("")
-    return not (assets_ok and kdk_ok and (efi is None or efi["status"] != "missing")
-                and finish_ok is not False)
+    return not (assets_ok and kdk_ok and (efi is None or efi["status"] != "missing"))
 
 
 def confirm(efi, assume_yes):
@@ -531,14 +526,7 @@ def main(argv=None):
         want = plan(args.usb, args.oclp_tag or installed_oclp_tag(), args.kdk_build)
         assets_ok, kdk_ok, _ = inspect(args.usb, want)
         efi = None if args.packages_only else efi_read(args.usb)
-        finish_ok = None
-        if efi and efi["model"] == "MacBookPro11,3" and efi["status"] != "spoofed":
-            try:
-                finish_bundle.verify(args.usb)
-                finish_ok = True
-            except (OSError, ValueError):
-                finish_ok = False
-        needs_work = report(want, assets_ok, kdk_ok, efi, finish_ok)
+        needs_work = report(want, assets_ok, kdk_ok, efi)
 
         if not needs_work:
             say("PASS: nothing is missing. The USB is ready.")
@@ -559,15 +547,9 @@ def main(argv=None):
         if efi and efi["status"] == "missing":
             if efi_fix(args.usb)["status"] != "ok":
                 raise FixError("OpenCore DataHub check failed after the update.")
-        if finish_ok is False:
-            stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-            backup_dir = Path(__file__).resolve().parent / "build/finish-bundle-backups" / stamp
-            finish_bundle.install(args.usb, backup_dir)
-            say("Desktop final tool: copied and verified USB MBP113-Finish/finish-install.command.")
-            say("Run it on the MacBook desktop after OCLP installs OpenCore to its internal drive.")
         say("PASS: the USB is ready. Eject it and boot the target Mac from the USB's EFI Boot.")
         return 0
-    except (FixError, OSError, ValueError) as error:
+    except FixError as error:
         say("STOP:", error)
         return 2
 
