@@ -94,6 +94,8 @@ The script reads the OpenCore config on the USB's EFI (`EFI/OC/config.plist`) ev
 
 This final tool supports **OCLP 3.0.0 RC5 and installed macOS Tahoe 26**, including **26.7.2 / 25G332**. It is specific to **MacBookPro11,3**; other Macs are refused. It is standalone and does not use the retired RC3 helper modules or require the old 25G241 build.
 
+**Why the internal step is needed:** on the tested MacBook, the USB's DataHub settings were correct, but the internal EFI still had empty model/board values and `UpdateDataHub = false` after internal OpenCore installation. RC5 installs a newly generated OpenCore build; it does not automatically carry over the USB's manual DataHub edits. The standalone finisher changes just those three internal settings. If Tahoe, OpenCore and the required root patches are already installed, this correction does not require preparing another USB or reinstalling macOS. See the [developer evidence and proposed builder fix](docs/INTERNAL-DATAHUB.md).
+
 1. Boot **USB EFI Boot → your installed Tahoe disk** and reach the desktop. Choose the installed disk, rather than starting the installer again. Keep the USB connected and writable.
 2. Open **`MBP113-Finish/READ-ME-FIRST.txt`** on the USB. **Check before rebuilding or changing anything:**
 
@@ -140,6 +142,7 @@ If the boot test fails, reconnect the USB and boot **USB EFI Boot → the instal
 
 - [Why OCLP RC USBs miss AutoPkg-Assets.pkg and KDK.pkg](docs/OCLP-RC-ASSETS-BUG.md): logs, source references and the fix.
 - [Testing](docs/TESTING.md): hardware results, the DataHub control test and the automated checks.
+- [Internal DataHub evidence](docs/INTERNAL-DATAHUB.md): RC5 before/after results, the fresh-build mechanism and the scope of an internal-only correction.
 - [OCLP: booting without the USB drive](https://dortania.github.io/OpenCore-Legacy-Patcher/POST-INSTALL.html#booting-without-usb-drive).
 
 This is an unofficial tool. **OCLP and its contributors provide the actual patches and boot support.** This repo provides surrounding code and documentation, developed with AI assistance. See [NOTICE.md](NOTICE.md) for upstream sources and credits, and [LICENSE](LICENSE).

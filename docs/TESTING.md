@@ -43,11 +43,20 @@ read-only disk-selection check also followed the preparation iMac's running
 APFS snapshot to its physical disk successfully; invoking the full helper on
 that iMac stopped at the wrong-model guard before mounting or editing EFI.
 
-**Hardware limit:** this restored standalone RC5 finisher has not yet been run
-on the MacBook. Its audit and subsequent USB-free boot test are still pending.
-The earlier hardware results above do not establish a successful boot with
-this new helper. The bundled TXT asks for an audit of the MacBook's existing
-internal config **before** rebuilding OpenCore or applying changes.
+**MacBook hardware evidence, 6 November:** the owner supplied the standalone
+helper's terminal output from **MacBookPro11,3 / Tahoe 26.7.2 / 25G332**. Its
+initial read-only audit identified the internal EFI and found empty
+`SystemProductName` and `BoardProduct`, with `UpdateDataHub = false`. OpenCore
+and root patches were reported installed. The normal finisher then reported
+its backup/report location and `PASS: internal EFI configuration verified`.
+The owner subsequently reported that `--check` showed the expected values.
+These are owner-supplied results; the preparation iMac did not independently
+read the MacBook's internal config. [Detailed evidence and source analysis](INTERNAL-DATAHUB.md).
+
+**Hardware limit:** the restored helper has now verified the corrected
+configuration on the MacBook, but successful USB-free starts after this
+correction have not yet been reported. The bundled TXT asks for an audit of
+the existing internal config **before** rebuilding OpenCore or applying changes.
 
 ```bash
 ./scripts/test.sh
